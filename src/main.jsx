@@ -61,11 +61,10 @@ function pickRarity(){ const n=Math.random(); return n>.985?4:n>.92?3:n>.72?2:n>
 function readJSON(key,fallback){ try { const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; } catch { return fallback; } }
 function App(){
   const [serverReady, setServerReady] = useState(false);
-
   const [tab,setTab] = useState('home');
-  const [cards,setCards] = useState(()=>readJSON(STORE_KEY,[]));
-  const [xp,setXp] = useState(()=>Number(localStorage.getItem(XP_KEY)||0));
-  const [missions,setMissions] = useState(()=>readJSON(MISSION_KEY,{photo:0,days:0}));
+  const [cards,setCards] = useState(() => TG?.initData ? [] : readJSON(STORE_KEY, []));
+const [xp,setXp] = useState(() => TG?.initData ? 0 : Number(localStorage.getItem(XP_KEY) || 0));
+const [missions,setMissions] = useState(() => TG?.initData ? {photo:0,days:0} : readJSON(MISSION_KEY,{photo:0,days:0}));
   const [photo,setPhoto] = useState('');
   const [fileName,setFileName] = useState('');
   const [draft,setDraft] = useState(null);
