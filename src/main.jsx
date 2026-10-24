@@ -2,7 +2,43 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Camera, Cat, Check, ChevronRight, CircleHelp, Compass, Crown, ImagePlus, PawPrint, RotateCcw, Sparkles, Star, Trophy, UserRound, X, Zap, Heart, Shield, Footprints, Trash2, Download, Info } from 'lucide-react';
 import './style.css';
+const TG = window.Telegram?.WebApp;
+TG?.ready();
+TG?.expand();
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+async function catgoRequest(action, extra = {}) {
+  if (!TG?.initData) {
+    throw new Error('Открой игру через Telegram-бота');
+  }
+
+  const response = await fetch(
+    `${SUPABASE_URL}/functions/v1/catgo-player`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify({
+        initData: TG.initData,
+        action,
+        ...extra,
+      }),
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || 'Ошибка сохранения');
+  }
+
+  return result;
+}
 const STORE_KEY = 'catgo_v1_cards';
 const XP_KEY = 'catgo_v1_xp';
 const MISSION_KEY = 'catgo_v1_missions';
@@ -24,6 +60,43 @@ function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 function pickRarity(){ const n=Math.random(); return n>.985?4:n>.92?3:n>.72?2:n>.38?1:0; }
 function readJSON(key,fallback){ try { const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; } catch { return fallback; } }
 function App(){
+  const [serverReady, setServerReady] = useState(false);
+
+useEffect(() => {
+  let cancelled = false;
+
+  async function loadPlayer() {
+    if (!TG?.initData) {
+      setMessage('Открой игру через Telegram-бота для синхронизации.');
+      setServerReady(true);
+      return;
+    }
+
+    try {
+      const result = await catgoRequest('get_cards');
+
+      if (cancelled) return;
+
+      const loadedCards = (result.cards || []).map(row => row.card_data);
+
+      setCards(loadedCards);
+      setXp(loadedCards.reduce((sum, card) => sum + (card.xp || 0), 0));
+      setMissions({ photo: loadedCards.length, days: 0 });
+      setServerReady(true);
+    } catch (error) {
+      if (!cancelled) {
+        setMessage(`Не удалось загрузить коллекцию: ${error.message}`);
+        setServerReady(true);
+      }
+    }
+  }
+
+  loadPlayer();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
   const [tab,setTab] = useState('home');
   const [cards,setCards] = useState(()=>readJSON(STORE_KEY,[]));
   const [xp,setXp] = useState(()=>Number(localStorage.getItem(XP_KEY)||0));
@@ -65,13 +138,31 @@ function openFilePicker(){
     setDraft({id:crypto.randomUUID?.()||String(Date.now()),name:names[rand(0,names.length-1)],rarity:rarities[rarityIndex],rarityIndex,traits:values,createdAt:Date.now(),photo,xp:rarities[rarityIndex].bonus,originalName:fileName});
   }
   function saveCard(){
-    if(!draft) return;
-    if(cards.some(c=>c.id===draft.id)) return;
-    setCards(prev=>[draft,...prev]); setXp(v=>v+draft.xp);
-    setMissions(prev=>({...prev,photo:(prev.photo||0)+1}));
-    setPhoto(''); setDraft(null); setTab('collection');
-    setMessage(`Карточка добавлена! +${draft.xp} XP`);
-    window.scrollTo({top:0,behavior:'smooth'});
+  async function saveCard() {
+  if (!draft || !serverReady) return;
+  if (cards.some(c => c.id === draft.id)) return;
+
+  if (TG?.initData) {
+    try {
+      await catgoRequest('save_card', { card: draft });
+    } catch (error) {
+      setMessage(`Не удалось сохранить карточку: ${error.message}`);
+      return;
+    }
+  }
+
+  setCards(prev => [draft, ...prev]);
+  setXp(v => v + draft.xp);
+  setMissions(prev => ({
+    ...prev,
+    photo: (prev.photo || 0) + 1
+  }));
+
+  setPhoto('');
+  setDraft(null);
+  setTab('collection');
+  setMessage(`Карточка добавлена! +${draft.xp} XP`);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function removeCard(id){ if(!confirm('Удалить карточку из коллекции?')) return; const card=cards.find(c=>c.id===id); setCards(prev=>prev.filter(c=>c.id!==id)); if(card) setXp(v=>Math.max(0,v-card.xp)); }
   function exportData(){
