@@ -88,7 +88,7 @@ function startPhoto(){
 
     {tab==='home' && <main className="page">
       <section className="hero-card">
-        <div className="hero-copy"><span className="eyebrow"><Sparkles size={13}/> ТВОЯ КОЛЛЕКЦИЯ НАЧИНАЕТСЯ ЗДЕСЬ</span><h1>Лови моменты.<br/><em>Собирай котиков!</em></h1><p>Встретил кота? Сделай фото и добавь его в свою коллекцию.</p><button className="primary-button" onClick={startPhoto}><Camera size={19}/> Найти кота</button></div>
+        <div className="hero-copy"><span className="eyebrow"><Sparkles size={13}/> ТВОЯ КОЛЛЕКЦИЯ НАЧИНАЕТСЯ ЗДЕСЬ</span><h1>Мир полон котиков.<br/><em>Найди своих!</em></h1><p>Встретил кота? Сделай фото и добавь его в свою коллекцию.</p><button className="primary-button" onClick={startPhoto}><Camera size={19}/> Найти кота</button></div>
         <div className="hero-cat"><div className="sun"></div><div className="cat-emoji">🐈</div><span className="sparkle s1">✦</span><span className="sparkle s2">✧</span><span className="hero-caption">реальные встречи ✨</span></div>
       </section>
       <section className="stats-grid">
