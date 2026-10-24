@@ -40,13 +40,14 @@ function App(){
   const level = Math.floor(xp/100)+1;
   const nextXP = xp%100;
   const sortedCards = useMemo(()=>[...cards].sort((a,b)=>b.createdAt-a.createdAt),[cards]);
-  
 function startPhoto(){
   setPhoto('');
   setDraft(null);
   setTab('camera');
 }
-
+function openFilePicker(){
+  inputRef.current?.click();
+}
   function onFile(e){
     const f=e.target.files?.[0]; if(!f) return;
     if(!f.type.startsWith('image/')) { setMessage('Выбери изображение кота.'); return; }
