@@ -62,7 +62,17 @@ function readJSON(key,fallback){ try { const v=localStorage.getItem(key); return
 function App(){
   const [serverReady, setServerReady] = useState(false);
 
-useEffect(() => {
+  const [tab,setTab] = useState('home');
+  const [cards,setCards] = useState(()=>readJSON(STORE_KEY,[]));
+  const [xp,setXp] = useState(()=>Number(localStorage.getItem(XP_KEY)||0));
+  const [missions,setMissions] = useState(()=>readJSON(MISSION_KEY,{photo:0,days:0}));
+  const [photo,setPhoto] = useState('');
+  const [fileName,setFileName] = useState('');
+  const [draft,setDraft] = useState(null);
+  const [showInfo,setShowInfo] = useState(false);
+  const [message,setMessage] = useState('');
+  const inputRef = useRef(null);
+  useEffect(() => {
   let cancelled = false;
 
   async function loadPlayer() {
@@ -97,16 +107,6 @@ useEffect(() => {
     cancelled = true;
   };
 }, []);
-  const [tab,setTab] = useState('home');
-  const [cards,setCards] = useState(()=>readJSON(STORE_KEY,[]));
-  const [xp,setXp] = useState(()=>Number(localStorage.getItem(XP_KEY)||0));
-  const [missions,setMissions] = useState(()=>readJSON(MISSION_KEY,{photo:0,days:0}));
-  const [photo,setPhoto] = useState('');
-  const [fileName,setFileName] = useState('');
-  const [draft,setDraft] = useState(null);
-  const [showInfo,setShowInfo] = useState(false);
-  const [message,setMessage] = useState('');
-  const inputRef = useRef(null);
   useEffect(()=>{ localStorage.setItem(STORE_KEY,JSON.stringify(cards)); },[cards]);
   useEffect(()=>{ localStorage.setItem(XP_KEY,String(xp)); },[xp]);
   useEffect(()=>{ localStorage.setItem(MISSION_KEY,JSON.stringify(missions)); },[missions]);
@@ -138,33 +138,41 @@ function openFilePicker(){
     setDraft({id:crypto.randomUUID?.()||String(Date.now()),name:names[rand(0,names.length-1)],rarity:rarities[rarityIndex],rarityIndex,traits:values,createdAt:Date.now(),photo,xp:rarities[rarityIndex].bonus,originalName:fileName});
   }
   function saveCard(){
-  async function saveCard() {
-  if (!draft || !serverReady) return;
-  if (cards.some(c => c.id === draft.id)) return;
+    async function saveCard() {
+    if (!draft || !serverReady) return;
+    if (cards.some(c => c.id === draft.id)) return;
 
-  if (TG?.initData) {
-    try {
-      await catgoRequest('save_card', { card: draft });
-    } catch (error) {
-      setMessage(`Не удалось сохранить карточку: ${error.message}`);
-      return;
+    if (TG?.initData) {
+      try {
+        await catgoRequest('save_card', { card: draft });
+      } catch (error) {
+        setMessage(`Не удалось сохранить карточку: ${error.message}`);
+        return;
+      }
     }
+
+    setCards(prev => [draft, ...prev]);
+    setXp(v => v + draft.xp);
+    setMissions(prev => ({
+      ...prev,
+      photo: (prev.photo || 0) + 1
+    }));
+
+    setPhoto('');
+    setDraft(null);
+    setTab('collection');
+    setMessage(`Карточка добавлена! +${draft.xp} XP`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  setCards(prev => [draft, ...prev]);
-  setXp(v => v + draft.xp);
-  setMissions(prev => ({
-    ...prev,
-    photo: (prev.photo || 0) + 1
-  }));
+  function removeCard(id) {
+    if (!confirm('Удалить карточку из коллекции?')) return;
 
-  setPhoto('');
-  setDraft(null);
-  setTab('collection');
-  setMessage(`Карточка добавлена! +${draft.xp} XP`);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+    const card = cards.find(c => c.id === id);
+    setCards(prev => prev.filter(c => c.id !== id));
+
+    if (card) setXp(v => Math.max(0, v - card.xp));
   }
-  function removeCard(id){ if(!confirm('Удалить карточку из коллекции?')) return; const card=cards.find(c=>c.id===id); setCards(prev=>prev.filter(c=>c.id!==id)); if(card) setXp(v=>Math.max(0,v-card.xp)); }
   function exportData(){
     const blob=new Blob([JSON.stringify({cards,xp,missions,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='catgo-backup.json'; a.click(); URL.revokeObjectURL(url);
