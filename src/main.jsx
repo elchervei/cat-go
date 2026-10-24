@@ -136,8 +136,8 @@ function openFilePicker(){
     const values=traits.map(t=>({label:t.label,value:rand(t.min,t.max)}));
     setDraft({id:crypto.randomUUID?.()||String(Date.now()),name:names[rand(0,names.length-1)],rarity:rarities[rarityIndex],rarityIndex,traits:values,createdAt:Date.now(),photo,xp:rarities[rarityIndex].bonus,originalName:fileName});
   }
-  function saveCard(){
-    async function saveCard() {
+  
+  async function saveCard() {
     if (!draft || !serverReady) return;
     if (cards.some(c => c.id === draft.id)) return;
 
