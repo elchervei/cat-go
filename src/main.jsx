@@ -138,8 +138,20 @@ function openFilePicker(){
   }
   
   async function saveCard() {
-    if (!draft || !serverReady) return;
-    if (cards.some(c => c.id === draft.id)) return;
+  if (!draft) {
+    setMessage('Сначала создай карточку.');
+    return;
+  }
+
+  if (!serverReady) {
+    setMessage('Коллекция ещё загружается. Закрой и снова открой игру через Telegram.');
+    return;
+  }
+
+  if (cards.some(c => c.id === draft.id)) {
+    setMessage('Эта карточка уже добавлена.');
+    return;
+  }
 
     if (TG?.initData) {
       try {
