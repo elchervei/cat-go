@@ -118,7 +118,24 @@ function startPhoto(){
   setTab('camera');
 }
 function openFilePicker(){
-  inputRef.current?.click();
+  const input = inputRef.current;
+  if (!input) return;
+  input.removeAttribute('capture');
+  input.click();
+}
+
+function openCamera(){
+  const input = inputRef.current;
+  if (!input) return;
+  input.setAttribute('capture', 'environment');
+  input.click();
+}
+
+function openGallery(){
+  const input = inputRef.current;
+  if (!input) return;
+  input.removeAttribute('capture');
+  input.click();
 }
   function onFile(e){
     const f=e.target.files?.[0]; if(!f) return;
