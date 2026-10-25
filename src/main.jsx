@@ -61,6 +61,7 @@ function pickRarity(){ const n=Math.random(); return n>.985?4:n>.92?3:n>.72?2:n>
 function readJSON(key,fallback){ try { const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; } catch { return fallback; } }
 function App(){
   const [serverReady, setServerReady] = useState(false);
+  const [savingCard, setSavingCard] = useState(false);
   const [tab,setTab] = useState('home');
   const [cards,setCards] = useState(() => TG?.initData ? [] : readJSON(STORE_KEY, []));
 const [xp,setXp] = useState(() => TG?.initData ? 0 : Number(localStorage.getItem(XP_KEY) || 0));
@@ -154,11 +155,40 @@ function openGallery(){
     setDraft({id:crypto.randomUUID?.()||String(Date.now()),name:names[rand(0,names.length-1)],rarity:rarities[rarityIndex],rarityIndex,traits:values,createdAt:Date.now(),photo,xp:rarities[rarityIndex].bonus,originalName:fileName});
   }
   
-  async function saveCard() {
-  if (!draft) {
-    setMessage('Сначала создай карточку.');
+  
+async function saveCard() {
+  if (!draft || !serverReady || savingCard) return;
+
+  if (cards.some(c => c.id === draft.id)) {
+    setMessage('Эта карточка уже добавлена.');
     return;
   }
+
+  setSavingCard(true);
+
+  try {
+    if (TG?.initData) {
+      await catgoRequest('save_card', { card: draft });
+    }
+
+    setCards(prev => [draft, ...prev]);
+    setXp(v => v + draft.xp);
+    setMissions(prev => ({
+      ...prev,
+      photo: (prev.photo || 0) + 1
+    }));
+
+    setPhoto('');
+    setDraft(null);
+    setTab('collection');
+    setMessage(`Карточка добавлена! +${draft.xp} XP`);
+  } catch (error) {
+    setMessage(`Не удалось сохранить карточку: ${error.message}`);
+  } finally {
+    setSavingCard(false);
+  }
+}
+
 
   if (!serverReady) {
     setMessage('Коллекция ещё загружается. Закрой и снова открой игру через Telegram.');
