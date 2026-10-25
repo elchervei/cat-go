@@ -248,7 +248,11 @@ function openGallery(){
 </div>}
       {photo && <div className="photo-flow">
         <div className="photo-preview"><img src={photo} alt="Твоё фото кота"/><span className="photo-tag"><Check size={14}/> Фото выбрано</span></div>
-        {!draft ? <><div className="tip-card"><Sparkles size={18}/><span><strong>Отлично поймал момент!</strong><small>Нажми дальше, чтобы создать игровую карточку.</small></span></div><div className="button-row"><button className="secondary-button" onClick={openFilePicker}><RotateCcw size={17}/> Переснять</button><button className="primary-button" onClick={prepareCard}>Создать карточку <ChevronRight size={18}/></button></div></> :
+        {!draft ? <><div className="tip-card"><Sparkles size={18}/><span><strong>Отлично поймал момент!</strong><small>Нажми дальше, чтобы создать игровую карточку.</small></span></div><div className="button-row">
+<button className="secondary-button" onClick={openCamera}>
+  <RotateCcw size={17}/> Переснять
+</button>
+<button className="primary-button" onClick={prepareCard}>Создать карточку <ChevronRight size={18}/></button></div></> :
           <div className="draft-card"><div className="draft-head"><span className="rarity-pill" style={{'--rarity':draft.rarity.color}}>{draft.rarity.name}</span><span className="xp-pill"><Zap size={14}/> +{draft.xp} XP</span></div><h2>{draft.name}</h2><p className="muted">Характеристики для игры · генерируются случайно</p><div className="traits-grid">{draft.traits.map(t=><div className="trait" key={t.label}><div className="trait-head"><span>{t.label}</span><b>{t.value}</b></div><div className="trait-bar"><i style={{width:`${t.value}%`}}/></div></div>)}</div><div className="button-row"><button className="secondary-button" onClick={()=>setDraft(null)}>Назад</button><button className="primary-button" onClick={saveCard}><Check size={18}/> Добавить в коллекцию</button></div></div>}
       </div>}
       <input ref={inputRef} className="hidden-input" type="file" accept="image/*" capture="environment" onChange={onFile}/>
