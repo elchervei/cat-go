@@ -4,7 +4,7 @@ import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, Trophy, UserRound, X, Zap, Heart,
   Shield, Footprints, Trash2, Download, Info, Users, UserPlus, Search,
-  Save, Palette, Pencil, UserCheck, UserX, Send
+  Save, Palette, Pencil, UserCheck, UserX
 } from 'lucide-react';
 import './style.css';
 
@@ -17,7 +17,9 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 async function catgoRequest(action, extra = {}) {
   if (!TG?.initData) throw new Error('Открой игру через Telegram-бота');
-  if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('Не настроено подключение к Supabase');
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    throw new Error('Не настроено подключение к Supabase');
+  }
 
   const response = await fetch(`${SUPABASE_URL}/functions/v1/catgo-player`, {
     method: 'POST',
@@ -109,7 +111,10 @@ function compressImage(file, maxSide = 1280, quality = 0.78) {
 
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const scale = Math.min(
+        1,
+        maxSide / Math.max(img.naturalWidth, img.naturalHeight)
+      );
       const width = Math.max(1, Math.round(img.naturalWidth * scale));
       const height = Math.max(1, Math.round(img.naturalHeight * scale));
       const canvas = document.createElement('canvas');
@@ -125,6 +130,7 @@ function compressImage(file, maxSide = 1280, quality = 0.78) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
+
       canvas.toBlob((blob) => {
         if (!blob) {
           reject(new Error('Не удалось сжать изображение'));
@@ -160,8 +166,12 @@ function App() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [tab, setTab] = useState('home');
 
-  const [cards, setCards] = useState(() => TG?.initData ? [] : readJSON(STORE_KEY, []));
-  const [xp, setXp] = useState(() => TG?.initData ? 0 : Number(localStorage.getItem(XP_KEY) || 0));
+  const [cards, setCards] = useState(() =>
+    TG?.initData ? [] : readJSON(STORE_KEY, [])
+  );
+  const [xp, setXp] = useState(() =>
+    TG?.initData ? 0 : Number(localStorage.getItem(XP_KEY) || 0)
+  );
   const [missions, setMissions] = useState(() =>
     TG?.initData ? { photo: 0, days: 0 } : readJSON(MISSION_KEY, { photo: 0, days: 0 })
   );
@@ -182,6 +192,11 @@ function App() {
   const [friendQuery, setFriendQuery] = useState('');
   const [playerResults, setPlayerResults] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [showcaseIds, setShowcaseIds] = useState(() =>
+    readJSON(PROFILE_KEY, emptyProfile).showcase_card_ids || []
+  );
+  const [viewingFriend, setViewingFriend] = useState(null);
+  const [loadingFriendProfile, setLoadingFriendProfile] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
   const [searchingFriends, setSearchingFriends] = useState(false);
   const [renamingCardId, setRenamingCardId] = useState('');
@@ -203,15 +218,15 @@ function App() {
       }
 
       try {
-        const [cardsResult, profileResult, friendsResult, requestsResult] = await Promise.allSettled([
-          catgoRequest('get_cards'),
-          catgoRequest('profile'),
-          catgoRequest('friends_list'),
-          catgoRequest('friend_requests'),
-        ]);
+        const [cardsResult, profileResult, friendsResult, requestsResult] =
+          await Promise.allSettled([
+            catgoRequest('get_cards'),
+            catgoRequest('profile'),
+            catgoRequest('friends_list'),
+            catgoRequest('friend_requests'),
+          ]);
 
         if (cancelled) return;
-
         if (cardsResult.status === 'rejected') throw cardsResult.reason;
 
         const loadedCards = (cardsResult.value.cards || [])
@@ -225,18 +240,32 @@ function App() {
         if (profileResult.status === 'fulfilled') {
           const p = profileResult.value.profile || emptyProfile;
           setProfile({ ...emptyProfile, ...p });
+          setShowcaseIds(
+            Array.isArray(p.showcase_card_ids) ? p.showcase_card_ids : []
+          );
           setProfileName(p.display_name || '');
           setProfileAvatar(p.avatar_url || '');
           setProfileBackground(p.background_key || 'lavender');
         } else {
-          setMessage(`Не удалось загрузить профиль: ${profileResult.reason?.message || 'ошибка'}`);
+          setMessage(
+            `Не удалось загрузить профиль: ${profileResult.reason?.message || 'ошибка'}`
+          );
         }
 
-        if (friendsResult.status === 'fulfilled') setFriends(friendsResult.value.friends || []);
-        if (requestsResult.status === 'fulfilled') setFriendRequests(requestsResult.value.requests || []);
+        if (friendsResult.status === 'fulfilled') {
+          setFriends(friendsResult.value.friends || []);
+        }
+        if (requestsResult.status === 'fulfilled') {
+          setFriendRequests(requestsResult.value.requests || []);
+        }
 
-        if (friendsResult.status === 'rejected' || requestsResult.status === 'rejected') {
-          setMessage('Коллекция загружена. Проверь SQL-настройку социальных функций Supabase.');
+        if (
+          friendsResult.status === 'rejected' ||
+          requestsResult.status === 'rejected'
+        ) {
+          setMessage(
+            'Коллекция загружена. Проверь SQL-настройку социальных функций Supabase.'
+          );
         }
 
         setServerReady(true);
@@ -250,7 +279,6 @@ function App() {
 
     loadPlayer();
     return () => { cancelled = true; };
-  // Initial load only; profile state is read once here.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -267,15 +295,27 @@ function App() {
   }, [missions]);
 
   useEffect(() => {
-    if (!TG?.initData) localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-  }, [profile]);
+    if (!TG?.initData) {
+      localStorage.setItem(
+        PROFILE_KEY,
+        JSON.stringify({ ...profile, showcase_card_ids: showcaseIds })
+      );
+    }
+  }, [profile, showcaseIds]);
 
   const level = Math.floor(xp / 100) + 1;
   const nextXP = xp % 100;
   const sortedCards = useMemo(
-    () => [...cards].sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0)),
+    () => [...cards].sort(
+      (a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0)
+    ),
     [cards]
   );
+
+  function notify(text) {
+    setMessage(text);
+    window.setTimeout(() => setMessage(''), 3200);
+  }
 
   function startPhoto() {
     setPhoto('');
@@ -326,6 +366,7 @@ function App() {
 
   function prepareCard() {
     if (!photo) return;
+
     const rarityIndex = pickRarity();
     const values = traits.map((trait) => ({
       label: trait.label,
@@ -347,8 +388,8 @@ function App() {
 
   async function saveCard() {
     if (!draft || !serverReady || savingCard) return;
-    const finalName = String(draft.name || '').trim();
 
+    const finalName = String(draft.name || '').trim();
     if (!finalName) {
       setMessage('Напиши имя кота перед сохранением.');
       return;
@@ -367,10 +408,15 @@ function App() {
     setMessage('');
 
     try {
-      if (TG?.initData) await catgoRequest('save_card', { card: cardToSave });
+      if (TG?.initData) {
+        await catgoRequest('save_card', { card: cardToSave });
+      }
       setCards((previous) => [cardToSave, ...previous]);
       setXp((previous) => previous + cardToSave.xp);
-      setMissions((previous) => ({ ...previous, photo: (previous.photo || 0) + 1 }));
+      setMissions((previous) => ({
+        ...previous,
+        photo: (previous.photo || 0) + 1,
+      }));
       setPhoto('');
       setDraft(null);
       setTab('collection');
@@ -385,6 +431,7 @@ function App() {
 
   async function saveCardName(card) {
     const name = renameValue.trim();
+
     if (!name) {
       setMessage('Имя не может быть пустым.');
       return;
@@ -395,8 +442,12 @@ function App() {
     }
 
     try {
-      if (TG?.initData) await catgoRequest('rename_card', { cardId: card.id, name });
-      setCards((previous) => previous.map((item) => item.id === card.id ? { ...item, name } : item));
+      if (TG?.initData) {
+        await catgoRequest('rename_card', { cardId: card.id, name });
+      }
+      setCards((previous) =>
+        previous.map((item) => item.id === card.id ? { ...item, name } : item)
+      );
       setRenamingCardId('');
       setRenameValue('');
       setMessage('Имя кота обновлено.');
@@ -409,9 +460,12 @@ function App() {
     if (!confirm('Удалить карточку из коллекции?')) return;
 
     try {
-      if (TG?.initData) await catgoRequest('delete_card', { cardId: id });
+      if (TG?.initData) {
+        await catgoRequest('delete_card', { cardId: id });
+      }
       const card = cards.find((item) => item.id === id);
       setCards((previous) => previous.filter((item) => item.id !== id));
+      setShowcaseIds((previous) => previous.filter((item) => item !== id));
       if (card) setXp((previous) => Math.max(0, previous - Number(card.xp || 0)));
       setMessage('Карточка удалена.');
     } catch (error) {
@@ -444,6 +498,7 @@ function App() {
 
   async function saveProfile() {
     const displayName = profileName.trim();
+
     if (!displayName) {
       setMessage('Укажи имя профиля.');
       return;
@@ -460,6 +515,7 @@ function App() {
         display_name: displayName,
         avatar_url: profileAvatar || null,
         background_key: profileBackground,
+        showcase_card_ids: showcaseIds,
       };
 
       if (TG?.initData) {
@@ -467,6 +523,7 @@ function App() {
           display_name: displayName,
           avatar_url: profileAvatar || null,
           background_key: profileBackground,
+          showcase_card_ids: showcaseIds,
         });
         setProfile({ ...updated, ...(result.profile || {}) });
       } else {
@@ -493,6 +550,7 @@ function App() {
 
   async function searchPlayers(event) {
     event?.preventDefault();
+
     const query = friendQuery.trim().replace(/^@/, '');
     if (query.length < 2) {
       setMessage('Введи Telegram username (минимум 2 символа).');
@@ -507,6 +565,7 @@ function App() {
     try {
       const result = await catgoRequest('search_players', { query });
       setPlayerResults(result.players || []);
+
       if (!(result.players || []).length) {
         setMessage('Игрок не найден. Он должен хотя бы раз открыть Cat Go.');
       } else {
@@ -525,8 +584,12 @@ function App() {
         telegramId: Number(player.telegram_id),
       });
       await refreshSocial();
-      setPlayerResults((previous) => previous.filter((item) => item.telegram_id !== player.telegram_id));
-      setMessage(result.status === 'accepted' ? 'Вы уже друзья!' : 'Запрос в друзья отправлен.');
+      setPlayerResults((previous) =>
+        previous.filter((item) => item.telegram_id !== player.telegram_id)
+      );
+      setMessage(
+        result.status === 'accepted' ? 'Вы уже друзья!' : 'Запрос в друзья отправлен.'
+      );
     } catch (error) {
       setMessage(`Не удалось отправить запрос: ${error.message}`);
     }
@@ -539,16 +602,23 @@ function App() {
         decision,
       });
       await refreshSocial();
-      setMessage(decision === 'accepted' ? 'Запрос принят. Вы теперь друзья!' : 'Запрос отклонён.');
+      setMessage(
+        decision === 'accepted' ? 'Запрос принят. Вы теперь друзья!' : 'Запрос отклонён.'
+      );
     } catch (error) {
       setMessage(`Не удалось обработать запрос: ${error.message}`);
     }
   }
 
   async function removeFriend(friend) {
-    if (!confirm(`Удалить ${friend.display_name || friend.username || 'этого игрока'} из друзей?`)) return;
+    if (!confirm(`Удалить ${friend.display_name || friend.username || 'этого игрока'} из друзей?`)) {
+      return;
+    }
+
     try {
-      await catgoRequest('remove_friend', { telegramId: Number(friend.telegram_id) });
+      await catgoRequest('remove_friend', {
+        telegramId: Number(friend.telegram_id),
+      });
       await refreshSocial();
       setMessage('Игрок удалён из друзей.');
     } catch (error) {
@@ -556,11 +626,64 @@ function App() {
     }
   }
 
+  function toggleShowcaseCard(cardId) {
+    setShowcaseIds((previous) => {
+      if (previous.includes(cardId)) {
+        return previous.filter((id) => id !== cardId);
+      }
+      if (previous.length >= 6) {
+        setMessage('В витрине может быть не больше 6 котов.');
+        return previous;
+      }
+      return [...previous, cardId];
+    });
+  }
+
+  async function openFriendProfile(friend) {
+    if (!TG?.initData) {
+      setMessage('Профили друзей доступны при запуске игры через Telegram.');
+      return;
+    }
+
+    setLoadingFriendProfile(true);
+    setViewingFriend({ profile: friend, cards: [], showcase_card_ids: [] });
+
+    try {
+      const result = await catgoRequest('public_profile', {
+        telegramId: Number(friend.telegram_id),
+      });
+      const publicProfile = result.profile || friend;
+      const publicCards = (result.cards || [])
+        .map((row) => row.card_data || row)
+        .filter((card) => card && card.id);
+
+      setViewingFriend({
+        profile: publicProfile,
+        cards: publicCards,
+        showcase_card_ids: Array.isArray(result.showcase_card_ids)
+          ? result.showcase_card_ids
+          : (publicProfile.showcase_card_ids || []),
+      });
+    } catch (error) {
+      setViewingFriend(null);
+      setMessage(
+        `Не удалось открыть профиль друга: ${error.message}. Нужна поддержка действия public_profile на сервере.`
+      );
+    } finally {
+      setLoadingFriendProfile(false);
+    }
+  }
+
   function exportData() {
     const blob = new Blob(
-      [JSON.stringify({ cards, xp, missions, profile, exportedAt: new Date().toISOString() }, null, 2)],
+      [JSON.stringify(
+        { cards, xp, missions, profile, exportedAt: new Date().toISOString() },
+        null,
+        2
+      )],
       { type: 'application/json' }
     );
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -569,7 +692,8 @@ function App() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  const profileBackgroundStyle = backgrounds[profileBackground] || backgrounds.lavender;
+  const profileBackgroundStyle =
+    backgrounds[profileBackground] || backgrounds.lavender;
 
   if (!serverReady) {
     return (
@@ -589,26 +713,37 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand-mark"><Cat size={25} strokeWidth={2.4} /></div>
-        <div className="brand-copy"><strong>Cat Go</strong><span>кошачья экспедиция</span></div>
+        <div className="brand-copy">
+          <strong>Cat Go</strong><span>кошачья экспедиция</span>
+        </div>
         <button className="icon-button" aria-label="О проекте" onClick={() => setShowInfo(true)}>
           <CircleHelp size={21} />
         </button>
       </header>
 
-      {message && <button className="toast" onClick={() => setMessage('')}>{message}<X size={16} /></button>}
+      {message && (
+        <button className="toast" onClick={() => setMessage('')}>
+          {message}<X size={16} />
+        </button>
+      )}
 
       {tab === 'home' && (
         <main className="page">
           <section className="hero-card">
             <div className="hero-copy">
-              <span className="eyebrow"><Sparkles size={13} /> ТВОЯ КОЛЛЕКЦИЯ НАЧИНАЕТСЯ ЗДЕСЬ</span>
+              <span className="eyebrow">
+                <Sparkles size={13} /> ТВОЯ КОЛЛЕКЦИЯ НАЧИНАЕТСЯ ЗДЕСЬ
+              </span>
               <h1>Мир полон котиков.<br /><em>Найди своих!</em></h1>
               <p>Встретил кота? Сделай фото, придумай имя и добавь его в коллекцию.</p>
-              <button className="primary-button" onClick={startPhoto}><Camera size={19} /> Найти кота</button>
+              <button className="primary-button" onClick={startPhoto}>
+                <Camera size={19} /> Найти кота
+              </button>
             </div>
             <div className="hero-cat">
               <div className="sun" /><div className="cat-emoji">🐈</div>
-              <span className="sparkle s1">✦</span><span className="sparkle s2">✧</span>
+              <span className="sparkle s1">✦</span>
+              <span className="sparkle s2">✧</span>
               <span className="hero-caption">реальные встречи ✨</span>
             </div>
           </section>
@@ -616,107 +751,195 @@ function App() {
           <section className="stats-grid">
             <div className="stat-card">
               <span className="stat-icon pink"><Zap size={18} /></span>
-              <span className="stat-label">ОПЫТ</span><strong>{xp} XP</strong>
+              <span className="stat-label">ОПЫТ</span>
+              <strong>{xp} XP</strong>
               <small>До уровня {level + 1}: {100 - nextXP} XP</small>
               <div className="progress"><i style={{ width: `${nextXP}%` }} /></div>
             </div>
             <div className="stat-card">
               <span className="stat-icon yellow"><PawPrint size={18} /></span>
               <span className="stat-label">КОЛЛЕКЦИЯ</span>
-              <strong>{cards.length} {cards.length === 1 ? 'котик' : cards.length >= 2 && cards.length <= 4 ? 'котика' : 'котиков'}</strong>
+              <strong>
+                {cards.length} {cards.length === 1
+                  ? 'котик'
+                  : cards.length >= 2 && cards.length <= 4
+                    ? 'котика' : 'котиков'}
+              </strong>
               <small>Каждая встреча — история</small>
             </div>
           </section>
 
-          <section className="section-head"><div><span className="eyebrow">ТВОЙ ПУТЬ</span><h2>Что будем делать?</h2></div></section>
+          <section className="section-head">
+            <div><span className="eyebrow">ТВОЙ ПУТЬ</span><h2>Что будем делать?</h2></div>
+          </section>
+
           <div className="action-list">
             <button className="action-card" onClick={startPhoto}>
               <span className="action-icon peach"><Camera size={22} /></span>
-              <span><strong>Сфотографировать кота</strong><small>Придумай ему собственное имя</small></span><ChevronRight size={20} />
+              <span><strong>Сфотографировать кота</strong><small>Придумай ему собственное имя</small></span>
+              <ChevronRight size={20} />
             </button>
             <button className="action-card" onClick={() => setTab('collection')}>
               <span className="action-icon lilac"><Cat size={22} /></span>
-              <span><strong>Моя коллекция</strong><small>{cards.length ? `${cards.length} карточек уже собрано` : 'Тут будут твои котики'}</small></span><ChevronRight size={20} />
+              <span><strong>Моя коллекция</strong><small>{cards.length ? `${cards.length} карточек уже собрано` : 'Тут будут твои котики'}</small></span>
+              <ChevronRight size={20} />
             </button>
             <button className="action-card" onClick={() => setTab('friends')}>
               <span className="action-icon mint"><Users size={22} /></span>
-              <span><strong>Друзья</strong><small>{friends.length} друзей · {friendRequests.length} запросов</small></span><ChevronRight size={20} />
+              <span><strong>Друзья</strong><small>{friends.length} друзей · {friendRequests.length} запросов</small></span>
+              <ChevronRight size={20} />
             </button>
           </div>
-          <p className="gentle-note"><Heart size={15} /> Фотографируй котиков бережно: не тревожь их и не подходи слишком близко.</p>
+          <p className="gentle-note">
+            <Heart size={15} /> Фотографируй котиков бережно: не тревожь их и не подходи слишком близко.
+          </p>
         </main>
       )}
 
       {tab === 'camera' && (
         <main className="page">
-          <button className="back-link" onClick={() => { setTab('home'); setPhoto(''); setDraft(null); }}>← На главную</button>
-          <div className="section-head"><div><span className="eyebrow">НОВАЯ НАХОДКА</span><h1>Кто тебе встретился?</h1><p className="muted">Сделай фото или выбери его из галереи.</p></div></div>
+          <button className="back-link" onClick={() => {
+            setTab('home'); setPhoto(''); setDraft(null);
+          }}>← На главную</button>
+
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">НОВАЯ НАХОДКА</span>
+              <h1>Кто тебе встретился?</h1>
+              <p className="muted">Сделай фото или выбери его из галереи.</p>
+            </div>
+          </div>
+
           {!photo && (
             <div className="camera-empty">
               <div className="camera-art"><Camera size={44} /><span>🐾</span></div>
-              <h2>Готов к встрече?</h2><p>Сфотографируй кота или выбери готовое фото из галереи.</p>
+              <h2>Готов к встрече?</h2>
+              <p>Сфотографируй кота или выбери готовое фото из галереи.</p>
               <div className="photo-actions">
-                <button className="primary-button full" onClick={openCamera}><Camera size={19} /> Сфотографировать</button>
-                <button className="secondary-button full" onClick={openGallery}><ImagePlus size={19} /> Выбрать из галереи</button>
+                <button className="primary-button full" onClick={openCamera}>
+                  <Camera size={19} /> Сфотографировать
+                </button>
+                <button className="secondary-button full" onClick={openGallery}>
+                  <ImagePlus size={19} /> Выбрать из галереи
+                </button>
               </div>
             </div>
           )}
+
           {photo && (
             <div className="photo-flow">
-              <div className="photo-preview"><img src={photo} alt="Выбранная фотография" /><span className="photo-tag"><Check size={14} /> Фото выбрано</span></div>
+              <div className="photo-preview">
+                <img src={photo} alt="Выбранная фотография" />
+                <span className="photo-tag"><Check size={14} /> Фото выбрано</span>
+              </div>
+
               {!draft ? (
                 <>
-                  <div className="tip-card"><Sparkles size={18} /><span><strong>Отличный момент!</strong><small>Фото сжато для экономии места. Теперь придумай коту имя.</small></span></div>
-                  <div className="button-row">
-                    <button className="secondary-button" onClick={openCamera}><RotateCcw size={17} /> Переснять</button>
-                    <button className="primary-button" onClick={prepareCard}>Создать карточку <ChevronRight size={18} /></button>
+                  <div className="tip-card">
+                    <Sparkles size={18} />
+                    <span><strong>Отличный момент!</strong><small>Фото сжато для экономии места. Теперь придумай коту имя.</small></span>
                   </div>
-                  <button className="secondary-button full" onClick={openGallery}><ImagePlus size={17} /> Выбрать другое фото</button>
+                  <div className="button-row">
+                    <button className="secondary-button" onClick={openCamera}>
+                      <RotateCcw size={17} /> Переснять
+                    </button>
+                    <button className="primary-button" onClick={prepareCard}>
+                      Создать карточку <ChevronRight size={18} />
+                    </button>
+                  </div>
+                  <button className="secondary-button full" onClick={openGallery}>
+                    <ImagePlus size={17} /> Выбрать другое фото
+                  </button>
                 </>
               ) : (
                 <div className="draft-card">
                   <div className="draft-head">
-                    <span className="rarity-pill" style={{ '--rarity': draft.rarity.color }}>{draft.rarity.name}</span>
+                    <span className="rarity-pill" style={{ '--rarity': draft.rarity.color }}>
+                      {draft.rarity.name}
+                    </span>
                     <span className="xp-pill"><Zap size={14} /> +{draft.xp} XP</span>
                   </div>
                   <label className="field-label">Как зовут этого кота?</label>
-                  <input className="field-input" maxLength={40} placeholder="Например, Барсик" value={draft.name} onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))} />
+                  <input
+                    className="field-input"
+                    maxLength={40}
+                    placeholder="Например, Барсик"
+                    value={draft.name}
+                    onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
+                  />
                   <p className="muted">Имя можно будет изменить позже.</p>
                   <p className="muted">Характеристики для игры · генерируются случайно</p>
                   <div className="traits-grid">
-                    {draft.traits.map((trait) => <div className="trait" key={trait.label}><div className="trait-head"><span>{trait.label}</span><b>{trait.value}</b></div><div className="trait-bar"><i style={{ width: `${trait.value}%` }} /></div></div>)}
+                    {draft.traits.map((trait) => (
+                      <div className="trait" key={trait.label}>
+                        <div className="trait-head"><span>{trait.label}</span><b>{trait.value}</b></div>
+                        <div className="trait-bar"><i style={{ width: `${trait.value}%` }} /></div>
+                      </div>
+                    ))}
                   </div>
                   <div className="button-row">
-                    <button className="secondary-button" onClick={() => setDraft(null)} disabled={savingCard}>Назад</button>
-                    <button className="primary-button" onClick={saveCard} disabled={savingCard || !serverReady}><Check size={18} /> {savingCard ? 'Сохраняю…' : 'Добавить в коллекцию'}</button>
+                    <button className="secondary-button" onClick={() => setDraft(null)} disabled={savingCard}>
+                      Назад
+                    </button>
+                    <button className="primary-button" onClick={saveCard} disabled={savingCard || !serverReady}>
+                      <Check size={18} /> {savingCard ? 'Сохраняю…' : 'Добавить в коллекцию'}
+                    </button>
                   </div>
                 </div>
               )}
             </div>
           )}
-          <input ref={inputRef} className="hidden-input" type="file" accept="image/*" capture="environment" onChange={onFile} />
-          <p className="privacy-note"><Shield size={15} /> Фото сжимаются перед сохранением карточки. Распознавание котов пока не подключено.</p>
+
+          <input
+            ref={inputRef}
+            className="hidden-input"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={onFile}
+          />
+          <p className="privacy-note">
+            <Shield size={15} /> Фото сжимаются перед сохранением карточки. Распознавание котов пока не подключено.
+          </p>
         </main>
       )}
 
       {tab === 'collection' && (
         <main className="page">
           <section className="section-head collection-head">
-            <div><span className="eyebrow">ТВОИ НАХОДКИ</span><h1>Моя коллекция</h1><p className="muted">Каждая карточка — кот, которого ты встретил.</p></div>
+            <div>
+              <span className="eyebrow">ТВОИ НАХОДКИ</span>
+              <h1>Моя коллекция</h1>
+              <p className="muted">Каждая карточка — кот, которого ты встретил.</p>
+            </div>
             <button className="round-add" onClick={startPhoto}><Camera size={20} /></button>
           </section>
+
           {cards.length === 0 ? (
-            <div className="empty-state"><div className="empty-paw">🐾</div><h2>Пока здесь пусто</h2><p>Сделай первое фото настоящего кота.</p><button className="primary-button" onClick={startPhoto}><Camera size={18} /> Найти кота</button></div>
+            <div className="empty-state">
+              <div className="empty-paw">🐾</div>
+              <h2>Пока здесь пусто</h2>
+              <p>Сделай первое фото настоящего кота.</p>
+              <button className="primary-button" onClick={startPhoto}><Camera size={18} /> Найти кота</button>
+            </div>
           ) : (
             <>
-              <div className="collection-summary"><span><Cat size={17} /> {cards.length} карточек</span><span><Zap size={17} /> {xp} XP всего</span><button onClick={exportData}><Download size={16} /> Бэкап</button></div>
+              <div className="collection-summary">
+                <span><Cat size={17} /> {cards.length} карточек</span>
+                <span><Zap size={17} /> {xp} XP всего</span>
+                <button onClick={exportData}><Download size={16} /> Бэкап</button>
+              </div>
               <div className="card-grid">
                 {sortedCards.map((card) => (
                   <article className="cat-card" key={card.id}>
                     <div className="cat-photo">
                       <img src={card.photo} alt={card.name || 'Кот'} />
-                      <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>{card.rarity?.name || 'Обычный'}</span>
-                      <button className="delete-card" aria-label="Удалить карточку" onClick={() => removeCard(card.id)}><Trash2 size={15} /></button>
+                      <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>
+                        {card.rarity?.name || 'Обычный'}
+                      </span>
+                      <button className="delete-card" aria-label="Удалить карточку" onClick={() => removeCard(card.id)}>
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                     <div className="cat-card-body">
                       {renamingCardId === card.id ? (
@@ -726,10 +949,22 @@ function App() {
                           <button className="small-action" onClick={() => setRenamingCardId('')} aria-label="Отмена"><X size={17} /></button>
                         </div>
                       ) : (
-                        <div className="card-name-row"><h3>{card.name || 'Без имени'}</h3><button className="small-action" aria-label="Переименовать кота" onClick={() => { setRenamingCardId(card.id); setRenameValue(card.name || ''); }}><Pencil size={15} /></button></div>
+                        <div className="card-name-row">
+                          <h3>{card.name || 'Без имени'}</h3>
+                          <button className="small-action" aria-label="Переименовать кота" onClick={() => {
+                            setRenamingCardId(card.id); setRenameValue(card.name || '');
+                          }}><Pencil size={15} /></button>
+                        </div>
                       )}
-                      <div className="cat-card-meta"><span><Zap size={14} /> +{card.xp} XP</span><span>{new Date(card.createdAt || Date.now()).toLocaleDateString('ru-RU')}</span></div>
-                      <div className="mini-traits">{(card.traits || []).map((trait) => <span key={trait.label}>{trait.label}: <b>{trait.value}</b></span>)}</div>
+                      <div className="cat-card-meta">
+                        <span><Zap size={14} /> +{card.xp} XP</span>
+                        <span>{new Date(card.createdAt || Date.now()).toLocaleDateString('ru-RU')}</span>
+                      </div>
+                      <div className="mini-traits">
+                        {(card.traits || []).map((trait) => (
+                          <span key={trait.label}>{trait.label}: <b>{trait.value}</b></span>
+                        ))}
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -742,10 +977,42 @@ function App() {
 
       {tab === 'missions' && (
         <main className="page">
-          <section className="section-head"><div><span className="eyebrow">МАЛЕНЬКИЕ ПРИКЛЮЧЕНИЯ</span><h1>Задания</h1><p className="muted">Собирай воспоминания, а не гоняйся за котиками.</p></div></section>
-          <div className="mission-card"><div className="mission-icon peach"><Camera size={22} /></div><div className="mission-content"><strong>Первая встреча</strong><p>Добавь фото кота в коллекцию.</p><div className="mission-progress"><span>{Math.min(missions.photo || 0, 1)} / 1</span><div className="progress"><i style={{ width: `${Math.min((missions.photo || 0) * 100, 100)}%` }} /></div></div></div><span className="mission-reward"><Zap size={14} /> +20 XP</span></div>
-          <div className="mission-card"><div className="mission-icon lilac"><PawPrint size={22} /></div><div className="mission-content"><strong>Коллекционер</strong><p>Собери 5 карточек котов.</p><div className="mission-progress"><span>{Math.min(cards.length, 5)} / 5</span><div className="progress"><i style={{ width: `${Math.min(cards.length / 5 * 100, 100)}%` }} /></div></div></div><span className="mission-reward"><Zap size={14} /> +50 XP</span></div>
-          <div className="mission-card"><div className="mission-icon mint"><Compass size={22} /></div><div className="mission-content"><strong>Наблюдатель</strong><p>Сделай три фотографии котов.</p><div className="mission-progress"><span>{Math.min(missions.photo || 0, 3)} / 3</span><div className="progress"><i style={{ width: `${Math.min((missions.photo || 0) / 3 * 100, 100)}%` }} /></div></div></div><span className="mission-reward"><Zap size={14} /> +30 XP</span></div>
+          <section className="section-head">
+            <div><span className="eyebrow">МАЛЕНЬКИЕ ПРИКЛЮЧЕНИЯ</span><h1>Задания</h1><p className="muted">Собирай воспоминания, а не гоняйся за котиками.</p></div>
+          </section>
+          <div className="mission-card">
+            <div className="mission-icon peach"><Camera size={22} /></div>
+            <div className="mission-content">
+              <strong>Первая встреча</strong><p>Добавь фото кота в коллекцию.</p>
+              <div className="mission-progress">
+                <span>{Math.min(missions.photo || 0, 1)} / 1</span>
+                <div className="progress"><i style={{ width: `${Math.min((missions.photo || 0) * 100, 100)}%` }} /></div>
+              </div>
+            </div>
+            <span className="mission-reward"><Zap size={14} /> +20 XP</span>
+          </div>
+          <div className="mission-card">
+            <div className="mission-icon lilac"><PawPrint size={22} /></div>
+            <div className="mission-content">
+              <strong>Коллекционер</strong><p>Собери 5 карточек котов.</p>
+              <div className="mission-progress">
+                <span>{Math.min(cards.length, 5)} / 5</span>
+                <div className="progress"><i style={{ width: `${Math.min(cards.length / 5 * 100, 100)}%` }} /></div>
+              </div>
+            </div>
+            <span className="mission-reward"><Zap size={14} /> +50 XP</span>
+          </div>
+          <div className="mission-card">
+            <div className="mission-icon mint"><Compass size={22} /></div>
+            <div className="mission-content">
+              <strong>Наблюдатель</strong><p>Сделай три фотографии котов.</p>
+              <div className="mission-progress">
+                <span>{Math.min(missions.photo || 0, 3)} / 3</span>
+                <div className="progress"><i style={{ width: `${Math.min((missions.photo || 0) / 3 * 100, 100)}%` }} /></div>
+              </div>
+            </div>
+            <span className="mission-reward"><Zap size={14} /> +30 XP</span>
+          </div>
           <div className="note-card"><Heart size={18} /><p>Держи дистанцию, не используй вспышку и не фотографируй кота, если он выглядит напуганным.</p></div>
         </main>
       )}
@@ -754,15 +1021,22 @@ function App() {
         <main className="page">
           <section className="profile-edit-hero" style={{ background: profileBackgroundStyle }}>
             <div className="profile-avatar-wrap">
-              {profileAvatar ? <img className="profile-avatar-img" src={profileAvatar} alt="Аватар профиля" /> : <div className="profile-avatar">🐈</div>}
-              <button className="avatar-edit-button" onClick={() => avatarInputRef.current?.click()} aria-label="Изменить аватар"><Camera size={16} /></button>
+              {profileAvatar
+                ? <img className="profile-avatar-img" src={profileAvatar} alt="Аватар профиля" />
+                : <div className="profile-avatar">🐈</div>}
+              <button className="avatar-edit-button" onClick={() => avatarInputRef.current?.click()} aria-label="Изменить аватар">
+                <Camera size={16} />
+              </button>
             </div>
             <input ref={avatarInputRef} className="hidden-input" type="file" accept="image/*" onChange={onAvatarFile} />
             <span className="eyebrow">ТВОЙ ПРОФИЛЬ</span>
             <h1>{profile.display_name || 'Котоисследователь'}</h1>
             <p>Уровень {level} · {xp} XP</p>
             {profile.username && <small className="profile-username">@{profile.username}</small>}
-            <div className="profile-progress"><div className="progress"><i style={{ width: `${nextXP}%` }} /></div><small>{nextXP}/100 XP до следующего уровня</small></div>
+            <div className="profile-progress">
+              <div className="progress"><i style={{ width: `${nextXP}%` }} /></div>
+              <small>{nextXP}/100 XP до следующего уровня</small>
+            </div>
           </section>
 
           <section className="profile-editor panel">
@@ -770,17 +1044,28 @@ function App() {
             <label className="field-label">Имя в Cat Go</label>
             <input className="field-input" maxLength={32} placeholder="Как тебя называть?" value={profileName} onChange={(e) => setProfileName(e.target.value)} />
             <label className="field-label">Аватар</label>
-            <button className="secondary-button full" onClick={() => avatarInputRef.current?.click()}><ImagePlus size={18} /> Выбрать из галереи</button>
+            <button className="secondary-button full" onClick={() => avatarInputRef.current?.click()}>
+              <ImagePlus size={18} /> Выбрать из галереи
+            </button>
             <label className="field-label"><Palette size={16} /> Фон профиля</label>
             <div className="background-picker">
               {Object.keys(backgrounds).map((key) => (
-                <button key={key} className={`background-option ${profileBackground === key ? 'selected' : ''}`} style={{ background: backgrounds[key] }} onClick={() => setProfileBackground(key)} aria-label={backgroundLabels[key]} title={backgroundLabels[key]}>
+                <button
+                  key={key}
+                  className={`background-option ${profileBackground === key ? 'selected' : ''}`}
+                  style={{ background: backgrounds[key] }}
+                  onClick={() => setProfileBackground(key)}
+                  aria-label={backgroundLabels[key]}
+                  title={backgroundLabels[key]}
+                >
                   {profileBackground === key && <Check size={17} />}
                   <span>{backgroundLabels[key]}</span>
                 </button>
               ))}
             </div>
-            <button className="primary-button full" onClick={saveProfile} disabled={savingProfile}><Save size={18} /> {savingProfile ? 'Сохраняю…' : 'Сохранить профиль'}</button>
+            <button className="primary-button full" onClick={saveProfile} disabled={savingProfile}>
+              <Save size={18} /> {savingProfile ? 'Сохраняю…' : 'Сохранить профиль'}
+            </button>
           </section>
 
           <div className="profile-stat-row">
@@ -788,7 +1073,51 @@ function App() {
             <div><strong>{cards.filter((card) => Number(card.rarityIndex) >= 3).length}</strong><span>Особых находок</span></div>
             <div><strong>{level}</strong><span>Уровень</span></div>
           </div>
-          <button className="action-card" onClick={exportData}><span className="action-icon mint"><Download size={21} /></span><span><strong>Скачать резервную копию</strong><small>Экспорт данных коллекции</small></span><ChevronRight size={20} /></button>
+
+          <section className="profile-editor panel">
+            <h2><Sparkles size={19} /> Моя витрина</h2>
+            <p className="muted">Выбери до 6 котов, которых увидят другие игроки в твоём профиле. Нажми «Сохранить профиль», чтобы сохранить выбор.</p>
+            <div className="card-grid">
+              {sortedCards.map((card) => {
+                const selected = showcaseIds.includes(card.id);
+                return (
+                  <button
+                    type="button"
+                    key={card.id}
+                    onClick={() => toggleShowcaseCard(card.id)}
+                    className="cat-card"
+                    style={{
+                      padding: 0,
+                      textAlign: 'left',
+                      border: selected ? '2px solid #e3a52f' : undefined,
+                      opacity: selected ? 1 : 0.88,
+                    }}
+                  >
+                    <div className="cat-card-image-wrap">
+                      <img src={card.photo} alt={card.name || 'Кот'} />
+                      <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>
+                        {card.rarity?.name || 'Обычный'}
+                      </span>
+                      {selected && (
+                        <span className="rarity-pill" style={{ right: 8, left: 'auto', top: 38, background: '#2c765c' }}>
+                          На витрине ✓
+                        </span>
+                      )}
+                    </div>
+                    <div className="cat-card-body"><h3>{card.name || 'Без имени'}</h3></div>
+                  </button>
+                );
+              })}
+            </div>
+            {cards.length === 0 && <p className="muted">Сначала добавь котов в коллекцию.</p>}
+            <p className="privacy-note">Выбрано: {showcaseIds.length} / 6</p>
+          </section>
+
+          <button className="action-card" onClick={exportData}>
+            <span className="action-icon mint"><Download size={21} /></span>
+            <span><strong>Скачать резервную копию</strong><small>Экспорт данных коллекции</small></span>
+            <ChevronRight size={20} />
+          </button>
           <p className="privacy-note"><Shield size={15} /> Аватар сохраняется в профиле после сжатия. Не загружай изображения, содержащие личные данные.</p>
         </main>
       )}
@@ -796,15 +1125,23 @@ function App() {
       {tab === 'friends' && (
         <main className="page">
           <section className="section-head">
-            <div><span className="eyebrow">ИГРАЙ ВМЕСТЕ</span><h1>Друзья</h1><p className="muted">Найди игроков Cat Go по Telegram username.</p></div>
+            <div>
+              <span className="eyebrow">ИГРАЙ ВМЕСТЕ</span>
+              <h1>Друзья</h1>
+              <p className="muted">Найди игроков Cat Go по Telegram username.</p>
+            </div>
           </section>
 
-          {!TG?.initData && <div className="note-card"><Info size={18} /><p>Настоящие друзья работают при открытии игры через Telegram-бота.</p></div>}
+          {!TG?.initData && (
+            <div className="note-card"><Info size={18} /><p>Настоящие друзья работают при открытии игры через Telegram-бота.</p></div>
+          )}
 
           <form className="friend-search-form" onSubmit={searchPlayers}>
             <Search size={19} />
             <input className="field-input" value={friendQuery} onChange={(e) => setFriendQuery(e.target.value)} placeholder="@username" autoComplete="off" />
-            <button className="primary-button" type="submit" disabled={searchingFriends}><Search size={17} /> {searchingFriends ? 'Ищу…' : 'Найти'}</button>
+            <button className="primary-button" type="submit" disabled={searchingFriends}>
+              <Search size={17} /> {searchingFriends ? 'Ищу…' : 'Найти'}
+            </button>
           </form>
           <p className="privacy-note">Показываются только игроки, которые хотя бы раз запускали Cat Go.</p>
 
@@ -813,9 +1150,21 @@ function App() {
               <h2>Результаты поиска</h2>
               {playerResults.map((player) => (
                 <div className="friend-row" key={player.telegram_id}>
-                  {player.avatar_url ? <img className="friend-avatar" src={player.avatar_url} alt="" /> : <div className="friend-avatar fallback">🐈</div>}
-                  <div className="friend-details"><strong>{player.display_name || 'Котоисследователь'}</strong><span>@{player.username || 'username не указан'}</span></div>
-                  <button className="small-action friend-add" onClick={() => sendFriendRequest(player)} aria-label="Добавить в друзья"><UserPlus size={19} /></button>
+                  {player.avatar_url
+                    ? <img className="friend-avatar" src={player.avatar_url} alt="" />
+                    : <div className="friend-avatar fallback">🐈</div>}
+                  <button
+                    type="button"
+                    className="friend-details"
+                    style={{ background: 'none', border: 0, textAlign: 'left', padding: 0, color: 'inherit' }}
+                    onClick={() => openFriendProfile(player)}
+                  >
+                    <strong>{player.display_name || 'Котоисследователь'}</strong>
+                    <span>@{player.username || 'username не указан'}</span>
+                  </button>
+                  <button className="small-action friend-add" onClick={() => sendFriendRequest(player)} aria-label="Добавить в друзья">
+                    <UserPlus size={19} />
+                  </button>
                 </div>
               ))}
             </section>
@@ -823,30 +1172,131 @@ function App() {
 
           <section className="friends-section">
             <h2><UserCheck size={19} /> Запросы в друзья ({friendRequests.length})</h2>
-            {friendRequests.length === 0 ? <p className="muted">Новых запросов пока нет.</p> : friendRequests.map((request) => {
-              const person = request.profile || request.requester || {};
-              return (
-                <div className="friend-row" key={request.id}>
-                  {person.avatar_url ? <img className="friend-avatar" src={person.avatar_url} alt="" /> : <div className="friend-avatar fallback">🐈</div>}
-                  <div className="friend-details"><strong>{person.display_name || 'Котоисследователь'}</strong><span>@{person.username || 'username не указан'}</span></div>
-                  <button className="small-action accept-action" onClick={() => respondFriendRequest(request, 'accepted')} aria-label="Принять запрос"><Check size={18} /></button>
-                  <button className="small-action reject-action" onClick={() => respondFriendRequest(request, 'declined')} aria-label="Отклонить запрос"><X size={18} /></button>
-                </div>
-              );
-            })}
+            {friendRequests.length === 0
+              ? <p className="muted">Новых запросов пока нет.</p>
+              : friendRequests.map((request) => {
+                const person = request.profile || request.requester || {};
+                return (
+                  <div className="friend-row" key={request.id}>
+                    {person.avatar_url
+                      ? <img className="friend-avatar" src={person.avatar_url} alt="" />
+                      : <div className="friend-avatar fallback">🐈</div>}
+                    <div className="friend-details">
+                      <strong>{person.display_name || 'Котоисследователь'}</strong>
+                      <span>@{person.username || 'username не указан'}</span>
+                    </div>
+                    <button className="small-action accept-action" onClick={() => respondFriendRequest(request, 'accepted')} aria-label="Принять запрос">
+                      <Check size={18} />
+                    </button>
+                    <button className="small-action reject-action" onClick={() => respondFriendRequest(request, 'declined')} aria-label="Отклонить запрос">
+                      <X size={18} />
+                    </button>
+                  </div>
+                );
+              })}
           </section>
 
           <section className="friends-section">
             <h2><Users size={19} /> Мои друзья ({friends.length})</h2>
-            {friends.length === 0 ? <div className="empty-state compact"><div className="empty-paw">🐾</div><h2>Пока без друзей</h2><p>Найди знакомого по его Telegram username.</p></div> : friends.map((friend) => (
+            {friends.length === 0 ? (
+              <div className="empty-state compact">
+                <div className="empty-paw">🐾</div>
+                <h2>Пока без друзей</h2>
+                <p>Найди знакомого по его Telegram username.</p>
+              </div>
+            ) : friends.map((friend) => (
               <div className="friend-row" key={friend.telegram_id}>
-                {friend.avatar_url ? <img className="friend-avatar" src={friend.avatar_url} alt="" /> : <div className="friend-avatar fallback">🐈</div>}
-                <div className="friend-details"><strong>{friend.display_name || 'Котоисследователь'}</strong><span>@{friend.username || 'username не указан'}</span></div>
-                <button className="small-action reject-action" onClick={() => removeFriend(friend)} aria-label="Удалить из друзей"><UserX size={18} /></button>
+                {friend.avatar_url
+                  ? <img className="friend-avatar" src={friend.avatar_url} alt="" />
+                  : <div className="friend-avatar fallback">🐈</div>}
+                <button
+                  type="button"
+                  className="friend-details"
+                  style={{ background: 'none', border: 0, textAlign: 'left', padding: 0, color: 'inherit' }}
+                  onClick={() => openFriendProfile(friend)}
+                >
+                  <strong>{friend.display_name || 'Котоисследователь'}</strong>
+                  <span>@{friend.username || 'username не указан'}</span>
+                </button>
+                <button className="small-action" onClick={() => openFriendProfile(friend)} aria-label="Открыть профиль">
+                  <UserRound size={18} />
+                </button>
+                <button className="small-action reject-action" onClick={() => removeFriend(friend)} aria-label="Удалить из друзей">
+                  <UserX size={18} />
+                </button>
               </div>
             ))}
           </section>
         </main>
+      )}
+
+      {viewingFriend && (
+        <div className="modal-backdrop" onClick={() => setViewingFriend(null)}>
+          <section
+            className="info-modal"
+            style={{ width: 'min(100%, 560px)', maxHeight: '82vh', overflowY: 'auto' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button className="modal-close" onClick={() => setViewingFriend(null)} aria-label="Закрыть профиль">
+              <X size={19} />
+            </button>
+            <div
+              className="profile-edit-hero"
+              style={{
+                background: backgrounds[viewingFriend.profile?.background_key] || backgrounds.lavender,
+                borderRadius: 18,
+                marginBottom: 16,
+              }}
+            >
+              {viewingFriend.profile?.avatar_url
+                ? <img className="profile-avatar-img" src={viewingFriend.profile.avatar_url} alt="Аватар" />
+                : <div className="profile-avatar">🐈</div>}
+              <h2>{viewingFriend.profile?.display_name || 'Котоисследователь'}</h2>
+              {viewingFriend.profile?.username && <small>@{viewingFriend.profile.username}</small>}
+              <p>{viewingFriend.cards.length} котов в коллекции</p>
+            </div>
+
+            {loadingFriendProfile ? (
+              <p className="muted">Загружаем профиль и витрину…</p>
+            ) : (
+              <>
+                <h2 style={{ textAlign: 'left' }}>Витрина котов</h2>
+                {(() => {
+                  const showcase = viewingFriend.showcase_card_ids || [];
+                  const featured = showcase
+                    .map((id) => viewingFriend.cards.find((card) => String(card.id) === String(id)))
+                    .filter(Boolean);
+
+                  return featured.length ? (
+                    <div className="card-grid">
+                      {featured.map((card) => (
+                        <article className="cat-card" key={card.id}>
+                          <div className="cat-card-image-wrap">
+                            <img src={card.photo} alt={card.name || 'Кот'} />
+                            <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>
+                              {card.rarity?.name || 'Обычный'}
+                            </span>
+                          </div>
+                          <div className="cat-card-body">
+                            <h3>{card.name || 'Без имени'}</h3>
+                            <div className="mini-traits">
+                              {(card.traits || []).map((trait) => (
+                                <span key={trait.label}>{trait.label}: <b>{trait.value}</b></span>
+                              ))}
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : <p className="muted">Пока нет котов на витрине.</p>;
+                })()}
+              </>
+            )}
+            <button className="secondary-button full" onClick={() => setViewingFriend(null)}>
+              Закрыть профиль
+            </button>
+          </section>
+        </div>
       )}
 
       <nav className="bottom-nav">
@@ -869,7 +1319,9 @@ function App() {
       {showInfo && (
         <div className="modal-backdrop" onClick={() => setShowInfo(false)}>
           <div className="info-modal" onClick={(event) => event.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowInfo(false)}><X size={19} /></button>
+            <button className="modal-close" onClick={() => setShowInfo(false)}>
+              <X size={19} />
+            </button>
             <div className="modal-icon">🐾</div>
             <h2>Добро пожаловать в Cat Go!</h2>
             <p>Фотографируй котов, давай им имена, оформляй профиль и добавляй друзей.</p>
