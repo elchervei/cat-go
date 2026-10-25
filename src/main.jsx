@@ -752,7 +752,7 @@ function App() {
 
       {tab === 'profile' && (
         <main className="page">
-          <section className="profile-edit-hero" style={{ background: profileBackground }}>
+          <section className="profile-edit-hero" style={{ background: profileBackgroundStyle }}>
             <div className="profile-avatar-wrap">
               {profileAvatar ? <img className="profile-avatar-img" src={profileAvatar} alt="Аватар профиля" /> : <div className="profile-avatar">🐈</div>}
               <button className="avatar-edit-button" onClick={() => avatarInputRef.current?.click()} aria-label="Изменить аватар"><Camera size={16} /></button>
