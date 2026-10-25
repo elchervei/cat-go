@@ -569,7 +569,7 @@ function App() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  const profileBackground = backgrounds[profile.background_key] || backgrounds.lavender;
+  const profileBackgroundStyle = backgrounds[profileBackground] || backgrounds.lavender;
 
   if (!serverReady) {
     return (
