@@ -290,3 +290,38 @@
   }
 }
  
+
+/* Исправление пропорций фотографий котиков */
+.cat-photo,
+.cat-card-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 14px 14px 0 0;
+}
+
+.cat-photo img,
+.cat-card-image-wrap img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Фотографии в профилях и на витринах */
+.profile-edit-hero img.profile-avatar-img {
+  width: 100px;
+  height: 100px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 50%;
+}
+
+/* Одинаковая ширина карточек в сетке */
+.card-grid .cat-card {
+  min-width: 0;
+  overflow: hidden;
+}
