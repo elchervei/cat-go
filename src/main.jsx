@@ -235,7 +235,17 @@ function openGallery(){
     {tab==='camera' && <main className="page">
       <button className="back-link" onClick={()=>{setTab('home');setPhoto('');setDraft(null)}}>← На главную</button>
       <div className="section-head"><div><span className="eyebrow">НОВАЯ НАХОДКА</span><h1>Кто тебе встретился?</h1><p className="muted">Сделай фото или выбери его из галереи.</p></div></div>
-      {!photo && <div className="camera-empty"><div className="camera-art"><Camera size={44}/><span>🐾</span></div><h2>Готов к встрече?</h2><p>Камера откроется на твоём телефоне. Если она не появится, можно выбрать фото из галереи.</p><button className="primary-button full" onClick={openFilePicker}><Camera size={19}/> Открыть камеру / галерею</button></div>}
+      {!photo && <div className="camera-empty"><div className="camera-art"><Camera size={44}/><span>🐾</span></div><h2>Готов к встрече?</h2><p>Камера откроется на твоём телефоне. Если она не появится, можно выбрать фото из галереи.</p>
+<div className="photo-actions">
+  <button className="primary-button full" onClick={openCamera}>
+    <Camera size={19}/> Сфотографировать
+  </button>
+
+  <button className="secondary-button full" onClick={openGallery}>
+    <ImagePlus size={19}/> Выбрать из галереи
+  </button>
+</div>
+</div>}
       {photo && <div className="photo-flow">
         <div className="photo-preview"><img src={photo} alt="Твоё фото кота"/><span className="photo-tag"><Check size={14}/> Фото выбрано</span></div>
         {!draft ? <><div className="tip-card"><Sparkles size={18}/><span><strong>Отлично поймал момент!</strong><small>Нажми дальше, чтобы создать игровую карточку.</small></span></div><div className="button-row"><button className="secondary-button" onClick={openFilePicker}><RotateCcw size={17}/> Переснять</button><button className="primary-button" onClick={prepareCard}>Создать карточку <ChevronRight size={18}/></button></div></> :
