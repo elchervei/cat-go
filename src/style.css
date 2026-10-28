@@ -717,3 +717,23 @@
   .bottom-nav button { font-size: 8px; }
   .bottom-nav button svg { width: 18px; height: 18px; }
 }
+
+/* Интерактивная карта OpenStreetMap */
+.shared-map-section { margin-top: 8px; }
+.shared-map-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.map-status { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--muted); font-weight:800; }
+.status-dot { width:8px; height:8px; border-radius:50%; background:#e5a14a; flex:0 0 8px; }
+.status-dot.ready { background:#44a778; }
+.map-locate-button { padding:9px 11px; font-size:11px; }
+.real-cat-map { width:100%; height:min(58vh,470px); min-height:320px; overflow:hidden; border:1px solid var(--line); border-radius:20px; background:#eaf0e5; z-index:0; }
+.catgo-map-cat-pin, .catgo-map-selected-pin { background:transparent; border:0; }
+.catgo-map-cat-pin span, .catgo-map-selected-pin span { display:grid; place-items:center; width:34px; height:34px; border:2px solid white; border-radius:50% 50% 50% 8px; background:#f2a18b; transform:rotate(-45deg); box-shadow:0 3px 10px #0002; font-size:19px; }
+.catgo-map-cat-pin span { background:#a88be6; }
+.catgo-map-cat-pin span::first-letter, .catgo-map-selected-pin span::first-letter { transform:rotate(45deg); }
+.map-selection-card { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; padding:13px 14px; border:1px solid var(--line); border-radius:16px; background:white; }
+.map-selection-card strong { font-size:12px; }
+.map-selection-card p { margin:4px 0 0; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+.owner-preview-note { margin:10px 0; padding:10px 12px; border:1px solid #e8d6ff; border-radius:12px; background:#f8f0ff; color:#7651a3; font-size:11px; line-height:1.5; }
+.leaflet-container { font-family:inherit; }
+.leaflet-popup-content { margin:10px 12px; line-height:1.4; }
+@media(max-width:360px) { .real-cat-map { min-height:285px; } .map-status { font-size:10px; } .map-locate-button { padding:8px; } }
