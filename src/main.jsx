@@ -757,6 +757,15 @@ function App() {
       createdAt: Date.now(),
       photo,
       photoHash: draft?.photoHash || '',
+      catTraits: {
+        coat_color: catAnalysis.coat_color,
+        pattern: catAnalysis.pattern,
+        fur_length: catAnalysis.fur_length,
+        visible_traits: catAnalysis.visible_traits,
+        breed_guess: catAnalysis.breed_guess,
+        description_ru: catAnalysis.description_ru,
+        confidence: catAnalysis.confidence,
+      },
       xp: 10,
       originalName: fileName,
     });
