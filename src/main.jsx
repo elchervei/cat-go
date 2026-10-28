@@ -484,6 +484,8 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
   const [sightingPhotoName, setSightingPhotoName] = useState('');
   const [sightingCatName, setSightingCatName] = useState('');
   const [sightingDescription, setSightingDescription] = useState('');
+  const [sightingCatStatus, setSightingCatStatus] = useState('');
+  const [sightingCatVerified, setSightingCatVerified] = useState(false);
   const [publishingSighting, setPublishingSighting] = useState(false);
   const [sightings, setSightings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -740,18 +742,39 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
             const file = event.target.files?.[0];
             if (!file) return;
             if (!file.type.startsWith('image/')) { onMessage('Выбери файл изображения.'); return; }
+            setSightingCatVerified(false);
+            setSightingCatStatus('ИИ изучает фотографию…');
+            setSightingPhoto('');
             try {
               const dataUrl = await compressImage(file, 1280, 0.76);
-              if (dataUrl.length > 2_000_000) { onMessage('Фото получилось слишком большим. Выбери другое.'); return; }
+              if (dataUrl.length > 2_000_000) { setSightingCatStatus(''); onMessage('Фото получилось слишком большим. Выбери другое.'); return; }
               setSightingPhoto(dataUrl);
               setSightingPhotoName(file.name);
-            } catch (error) { onMessage(error.message || 'Не удалось обработать фото.'); }
+              const detection = await catgoRequest('analyze_cat_photo', { photo_data_url: dataUrl });
+              if (detection?.analysis?.is_cat === true && Number(detection.analysis.confidence) >= 0.65) {
+                setSightingCatVerified(true);
+                setSightingCatStatus('Кот найден!');
+                if (!sightingCatName.trim() && detection.analysis.description_ru) {
+                  setSightingCatName(detection.analysis.description_ru.slice(0, 80));
+                }
+              } else {
+                setSightingCatStatus('ИИ не смог подтвердить, что на фото кот. Попробуй другое фото.');
+                setSightingPhoto('');
+                setSightingPhotoName('');
+              }
+            } catch (error) {
+              setSightingCatStatus('');
+              setSightingPhoto('');
+              setSightingPhotoName('');
+              onMessage(error.message || 'Не удалось обработать фото.');
+            }
           }} />
         </label>
+        {sightingCatStatus && <p className={`sighting-cat-status ${sightingCatVerified ? 'verified' : sightingCatStatus === 'ИИ изучает фотографию…' ? 'checking' : 'rejected'}`}>{sightingCatStatus}</p>}
         {sightingPhoto && <img className="sighting-photo-preview" src={sightingPhoto} alt="Предпросмотр находки" />}
         <input className="field-input" maxLength={80} value={sightingCatName} onChange={(event) => setSightingCatName(event.target.value)} placeholder="Имя кота (например, Рыжик)" />
         <textarea className="field-input sighting-description" maxLength={500} value={sightingDescription} onChange={(event) => setSightingDescription(event.target.value)} placeholder="Описание (необязательно)" rows={3} />
-        <button className="primary-button full" disabled={!backendReady || !selectedPoint || !sightingPhoto || publishingSighting} onClick={async () => {
+        <button className="primary-button full" disabled={!backendReady || !selectedPoint || !sightingPhoto || !sightingCatVerified || publishingSighting} onClick={async () => {
           setPublishingSighting(true);
           try {
             await catgoRequest('map_create_sighting', {
@@ -760,12 +783,15 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
               cat_name: sightingCatName.trim() || 'Котик',
               description: sightingDescription.trim(),
               photo_data_url: sightingPhoto,
+              cat_verified: sightingCatVerified,
             });
             const result = await catgoRequest('map_sightings');
             const rows = Array.isArray(result.sightings) ? result.sightings : [];
             setSightings(rows.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))));
             setSightingPhoto('');
             setSightingPhotoName('');
+            setSightingCatStatus('');
+            setSightingCatVerified(false);
             setSightingCatName('');
             setSightingDescription('');
             onMessage('Находка опубликована на общей карте!');
