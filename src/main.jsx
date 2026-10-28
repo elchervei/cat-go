@@ -66,7 +66,6 @@ async function catgoRequest(action, extra = {}) {
 
 const STORE_KEY = 'catgo_v1_cards';
 const XP_KEY = 'catgo_v1_xp';
-const MISSION_KEY = 'catgo_v1_missions';
 const PROFILE_KEY = 'catgo_v1_profile';
 
 const names = [
@@ -526,12 +525,6 @@ function App() {
     const storedXP = Number(localStorage.getItem(playerStorageKey(XP_KEY)) || 0);
     return Number.isFinite(storedXP) && storedXP >= 0 ? storedXP : 0;
   });
-  const [missions, setMissions] = useState(() =>
-    readJSON(playerStorageKey(MISSION_KEY), { photo: 0, days: 0 })
-  );
-  const [smartMissions, setSmartMissions] = useState([]);
-  const [loadingSmartMissions, setLoadingSmartMissions] = useState(false);
-  const [smartMissionMessage, setSmartMissionMessage] = useState("");
   const [profile, setProfile] = useState(() =>
     readJSON(playerStorageKey(PROFILE_KEY), emptyProfile)
   );
@@ -590,7 +583,6 @@ function App() {
 
         setCards(loadedCards);
         setXp(loadedCards.reduce((sum, card) => sum + Number(card.xp || 0), 0));
-        setMissions({ photo: loadedCards.length, days: 0 });
         setServerReady(true);
 
         // Profile and social data update in the background, after the game is usable.
@@ -640,11 +632,6 @@ function App() {
     if (TG?.initData && !serverReady) return;
     writeStorage(playerStorageKey(XP_KEY), String(xp));
   }, [xp, serverReady]);
-
-  useEffect(() => {
-    if (TG?.initData && !serverReady) return;
-    writeStorage(playerStorageKey(MISSION_KEY), JSON.stringify(missions));
-  }, [missions, serverReady]);
 
   useEffect(() => {
     if (TG?.initData && !profileSyncDone) return;
@@ -756,36 +743,6 @@ function App() {
     }
   }
 
-  async function generateSmartMissions() {
-    if (loadingSmartMissions) return;
-    setLoadingSmartMissions(true);
-    setSmartMissionMessage('');
-    try {
-      const collectionSummary = cards.slice(0, 60).map((card) => ({
-        coat_color: card.catTraits?.coat_color || 'неизвестно',
-        pattern: card.catTraits?.pattern || 'неизвестно',
-        fur_length: card.catTraits?.fur_length || 'неизвестно',
-        eye_color: card.catTraits?.eye_color || 'неизвестно',
-        visible_traits: Array.isArray(card.catTraits?.visible_traits) ? card.catTraits.visible_traits.slice(0, 4) : [],
-      }));
-      const result = await catgoRequest('generate_smart_missions', { cards: collectionSummary });
-      if (!Array.isArray(result.missions) || !result.missions.length) throw new Error('ИИ пока не смог подобрать задания.');
-      setSmartMissions(result.missions);
-      setSmartMissionMessage('Готово — задания подобраны по твоей коллекции.');
-    } catch (error) {
-      const known = new Set(cards.map((card) => String(card.catTraits?.coat_color || '').toLowerCase()));
-      const target = ['чёрный', 'белый', 'рыжий', 'серый', 'трёхцветный'].find((color) => ![...known].some((item) => item.includes(color))) || 'необычный';
-      setSmartMissions([
-        { id: 'fallback-color', title: 'Новый оттенок', description: 'Найди кота: ' + target + '.', target_color: target, target_pattern: '', target_trait: '', goal: 1, reward_xp: 20 },
-        { id: 'fallback-pattern', title: 'Изучатель узоров', description: 'Добавь кота с заметным рисунком шерсти.', target_color: '', target_pattern: 'рисунок шерсти', target_trait: '', goal: 1, reward_xp: 25 },
-        { id: 'fallback-observer', title: 'Внимательный наблюдатель', description: 'Добавь кота и проверь его видимые особенности.', target_color: '', target_pattern: '', target_trait: 'видимые особенности', goal: 1, reward_xp: 15 },
-      ]);
-      setSmartMissionMessage('ИИ временно недоступен — показал запасные задания. ' + error.message);
-    } finally {
-      setLoadingSmartMissions(false);
-    }
-  }
-
   function prepareCard() {
     if (!photo) return;
     if (!catAnalysis?.is_cat || catAnalysis.photo !== photo) {
@@ -847,10 +804,6 @@ function App() {
       }
       setCards((previous) => [cardToSave, ...previous]);
       setXp((previous) => (Number.isFinite(Number(previous)) ? Number(previous) : 0) + cardToSave.xp);
-      setMissions((previous) => ({
-        ...previous,
-        photo: (previous.photo || 0) + 1,
-      }));
       setPhoto('');
       setPendingPhotoHash('');
       setCatAnalysis(null);
@@ -1876,7 +1829,6 @@ function App() {
           ['collection', Cat, 'Коллекция'],
           ['map', MapPin, 'Карта'],
           ['friends', Users, 'Друзья'],
-          ['missions', Trophy, 'Задания'],
           ['profile', UserRound, 'Профиль'],
         ].map(([id, Icon, label]) => (
           <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
