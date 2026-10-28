@@ -10,6 +10,26 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+function loadGoogleMaps(apiKey) {
+  if (window.google?.maps) return Promise.resolve(window.google.maps);
+  if (!apiKey) return Promise.reject(new Error('Google Maps API key is not configured'));
+  if (window.__catGoGoogleMapsPromise) return window.__catGoGoogleMapsPromise;
+  window.__catGoGoogleMapsPromise = new Promise((resolve, reject) => {
+    const callbackName = '__catGoGoogleMapsCallback';
+    window[callbackName] = () => resolve(window.google.maps);
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(apiKey) + '&callback=' + callbackName + '&loading=async';
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => reject(new Error('Google Maps could not be loaded'));
+    document.head.appendChild(script);
+  });
+  return window.__catGoGoogleMapsPromise;
+}
+
 const TG = window.Telegram?.WebApp;
 TG?.ready();
 TG?.expand();
@@ -195,48 +215,93 @@ function SharedCatMap({ onMessage }) {
   const [sightings, setSightings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [backendReady, setBackendReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     if (!mapElementRef.current || mapRef.current) return undefined;
-    const map = new maplibregl.Map({
-      container: mapElementRef.current,
-      center: [10.4515, 51.1657],
-      zoom: 6,
-      style: {
-        version: 8,
-        sources: {
-          esriWorldStreetMap: {
+    let cancelled = false;
+    let clickListener = null;
+    const providerRef = { current: 'maplibre' };
+    const choosePoint = (point) => {
+      setSelectedPoint(point);
+      if (selectedMarkerRef.current) {
+        if (providerRef.current === 'google') selectedMarkerRef.current.setMap(null);
+        else selectedMarkerRef.current.remove();
+      }
+      if (providerRef.current === 'google' && window.google?.maps && mapRef.current) {
+        selectedMarkerRef.current = new window.google.maps.Marker({
+          map: mapRef.current, position: { lat: point.lat, lng: point.lng },
+          title: 'Выбранная точка', label: '📍',
+        });
+      } else if (mapRef.current) {
+        const element = document.createElement('div');
+        element.className = 'catgo-map-selected-pin';
+        element.innerHTML = '<span>📍</span>';
+        selectedMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
+          .setLngLat([point.lng, point.lat]).addTo(mapRef.current);
+      }
+    };
+    const initFallbackMap = () => {
+      if (cancelled || !mapElementRef.current) return;
+      providerRef.current = 'maplibre';
+      const map = new maplibregl.Map({
+        container: mapElementRef.current, center: [10.4515, 51.1657], zoom: 6,
+        style: {
+          version: 8,
+          sources: { esriWorldStreetMap: {
             type: 'raster',
             tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'],
             tileSize: 256,
             attribution: 'Tiles &copy; Esri — Sources: Esri, TomTom, Garmin, FAO, NOAA, USGS, and the GIS User Community',
-          },
+          }},
+          layers: [{ id: 'esri-world-street-map', type: 'raster', source: 'esriWorldStreetMap' }],
         },
-        layers: [{ id: 'esri-world-street-map', type: 'raster', source: 'esriWorldStreetMap' }],
-      },
-      attributionControl: true,
-    });
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    mapRef.current = map;
-
-    map.on('click', (event) => {
-      const point = { lat: Number(event.lngLat.lat.toFixed(6)), lng: Number(event.lngLat.lng.toFixed(6)) };
-      setSelectedPoint(point);
-      if (selectedMarkerRef.current) selectedMarkerRef.current.remove();
-      const element = document.createElement('div');
-      element.className = 'catgo-map-selected-pin';
-      element.innerHTML = '<span>📍</span>';
-      selectedMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
-        .setLngLat([point.lng, point.lat])
-        .addTo(map);
-    });
-
-    const resizeTimer = window.setTimeout(() => map.resize(), 150);
+        attributionControl: true,
+      });
+      map.addControl(new maplibregl.NavigationControl(), 'top-right');
+      mapRef.current = map;
+      setMapReady(true);
+      map.on('click', (event) => choosePoint({
+        lat: Number(event.lngLat.lat.toFixed(6)), lng: Number(event.lngLat.lng.toFixed(6)),
+      }));
+      window.setTimeout(() => map.resize(), 150);
+    };
+    const init = async () => {
+      if (!GOOGLE_MAPS_API_KEY) { initFallbackMap(); return; }
+      try {
+        const maps = await loadGoogleMaps(GOOGLE_MAPS_API_KEY);
+        if (cancelled || !mapElementRef.current) return;
+        providerRef.current = 'google';
+        const map = new maps.Map(mapElementRef.current, {
+          center: { lat: 51.1657, lng: 10.4515 }, zoom: 6,
+          mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+          clickableIcons: false,
+        });
+        mapRef.current = map;
+        setMapReady(true);
+        clickListener = map.addListener('click', (event) => {
+          if (!event.latLng) return;
+          choosePoint({
+            lat: Number(event.latLng.lat().toFixed(6)), lng: Number(event.latLng.lng().toFixed(6)),
+          });
+        });
+      } catch (error) {
+        console.warn('Google Maps unavailable; using Esri fallback map.', error);
+        initFallbackMap();
+      }
+    };
+    init();
     return () => {
-      window.clearTimeout(resizeTimer);
-      map.remove();
+      cancelled = true;
+      if (clickListener) clickListener.remove();
+      if (selectedMarkerRef.current) {
+        if (providerRef.current === 'google') selectedMarkerRef.current.setMap(null);
+        else selectedMarkerRef.current.remove();
+      }
+      if (mapRef.current?.remove) mapRef.current.remove();
       mapRef.current = null;
       selectedMarkerRef.current = null;
+      setMapReady(false);
     };
   }, []);
 
@@ -267,25 +332,36 @@ function SharedCatMap({ onMessage }) {
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !backendReady) return;
+    if (!map || !backendReady || !mapReady) return;
     const markers = [];
+    const isGoogle = Boolean(window.google?.maps && typeof map.addListener === 'function');
     sightings.forEach((sighting) => {
-      const element = document.createElement('div');
-      element.className = 'catgo-map-cat-pin';
-      element.innerHTML = '<span>🐈</span>';
       const title = String(sighting.cat_name || 'Котик').replace(/[&<>"]/g, '');
       const photo = typeof sighting.photo_url === 'string' && /^https:\/\//.test(sighting.photo_url)
         ? '<img src="' + sighting.photo_url.replace(/["<>]/g, '') + '" alt="" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:6px">'
         : '';
       const popupHtml = photo + '<strong>' + title + '</strong>' + (sighting.created_at ? '<br><small>' + new Date(sighting.created_at).toLocaleDateString('ru-RU') + '</small>' : '');
-      const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
-        .setLngLat([Number(sighting.longitude), Number(sighting.latitude)])
-        .setPopup(new maplibregl.Popup({ offset: 24 }).setHTML(popupHtml))
-        .addTo(map);
-      markers.push(marker);
+      if (isGoogle) {
+        const marker = new window.google.maps.Marker({
+          map, position: { lat: Number(sighting.latitude), lng: Number(sighting.longitude) },
+          title, label: '🐈',
+        });
+        const info = new window.google.maps.InfoWindow({ content: popupHtml });
+        marker.addListener('click', () => info.open({ map, anchor: marker }));
+        markers.push({ remove: () => marker.setMap(null) });
+      } else {
+        const element = document.createElement('div');
+        element.className = 'catgo-map-cat-pin';
+        element.innerHTML = '<span>🐈</span>';
+        const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
+          .setLngLat([Number(sighting.longitude), Number(sighting.latitude)])
+          .setPopup(new maplibregl.Popup({ offset: 24 }).setHTML(popupHtml))
+          .addTo(map);
+        markers.push(marker);
+      }
     });
     return () => { markers.forEach((marker) => marker.remove()); };
-  }, [sightings, backendReady]);
+  }, [sightings, backendReady, mapReady]);
 
   function locateMe() {
     if (!navigator.geolocation) {
@@ -294,17 +370,28 @@ function SharedCatMap({ onMessage }) {
     }
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        const point = [coords.longitude, coords.latitude];
-        mapRef.current?.flyTo({ center: point, zoom: 15 });
-        setSelectedPoint({ lat: Number(coords.latitude.toFixed(6)), lng: Number(coords.longitude.toFixed(6)) });
-        if (selectedMarkerRef.current) selectedMarkerRef.current.remove();
-        const element = document.createElement('div');
-        element.className = 'catgo-map-selected-pin';
-        element.innerHTML = '<span>📍</span>';
-        if (mapRef.current) {
+        const point = { lat: Number(coords.latitude.toFixed(6)), lng: Number(coords.longitude.toFixed(6)) };
+        const map = mapRef.current;
+        const isGoogle = Boolean(window.google?.maps && typeof map?.panTo === 'function');
+        if (map) {
+          if (isGoogle) { map.panTo({ lat: point.lat, lng: point.lng }); map.setZoom(15); }
+          else map.flyTo({ center: [point.lng, point.lat], zoom: 15 });
+        }
+        setSelectedPoint(point);
+        if (selectedMarkerRef.current) {
+          if (isGoogle) selectedMarkerRef.current.setMap(null);
+          else selectedMarkerRef.current.remove();
+        }
+        if (isGoogle) {
+          selectedMarkerRef.current = new window.google.maps.Marker({
+            map, position: { lat: point.lat, lng: point.lng }, title: 'Выбранная точка', label: '📍',
+          });
+        } else if (map) {
+          const element = document.createElement('div');
+          element.className = 'catgo-map-selected-pin';
+          element.innerHTML = '<span>📍</span>';
           selectedMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
-            .setLngLat(point)
-            .addTo(mapRef.current);
+            .setLngLat([point.lng, point.lat]).addTo(map);
         }
         onMessage('Точка выбрана. Перед публикацией проверь, не раскрывает ли она чужой дом.');
       },
