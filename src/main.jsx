@@ -216,6 +216,8 @@ function SharedCatMap({ onMessage }) {
   const [loading, setLoading] = useState(true);
   const [backendReady, setBackendReady] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  // The Edge Function independently checks Telegram initData and authorizes deletion server-side.
+  const isMapAdmin = String(TG?.initDataUnsafe?.user?.username || '').toLowerCase() === 'elchervei';
 
   useEffect(() => {
     if (!mapElementRef.current || mapRef.current) return undefined;
@@ -336,32 +338,71 @@ function SharedCatMap({ onMessage }) {
     const markers = [];
     const isGoogle = Boolean(window.google?.maps && typeof map.addListener === 'function');
     sightings.forEach((sighting) => {
-      const title = String(sighting.cat_name || 'Котик').replace(/[&<>"]/g, '');
-      const photo = typeof sighting.photo_url === 'string' && /^https:\/\//.test(sighting.photo_url)
-        ? '<img src="' + sighting.photo_url.replace(/["<>]/g, '') + '" alt="" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:6px">'
-        : '';
-      const popupHtml = photo + '<strong>' + title + '</strong>' + (sighting.created_at ? '<br><small>' + new Date(sighting.created_at).toLocaleDateString('ru-RU') + '</small>' : '');
+      const title = String(sighting.cat_name || 'Котик');
+      // Build popup content with DOM APIs so names cannot inject HTML.
+      const popupContent = document.createElement('div');
+      popupContent.style.maxWidth = '220px';
+      if (typeof sighting.photo_url === 'string' && /^https:\/\//.test(sighting.photo_url)) {
+        const photo = document.createElement('img');
+        photo.src = sighting.photo_url;
+        photo.alt = 'Фото находки';
+        photo.style.cssText = 'width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:6px';
+        popupContent.appendChild(photo);
+      }
+      const heading = document.createElement('strong');
+      heading.textContent = title;
+      popupContent.appendChild(heading);
+      if (sighting.created_at) {
+        const date = document.createElement('div');
+        date.textContent = new Date(sighting.created_at).toLocaleDateString('ru-RU');
+        date.style.cssText = 'font-size:12px;opacity:.7;margin-top:3px';
+        popupContent.appendChild(date);
+      }
+      if (isMapAdmin) {
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.textContent = '🗑 Удалить фото';
+        deleteButton.style.cssText = 'display:block;width:100%;margin-top:8px;padding:8px;border:0;border-radius:8px;background:#d93636;color:white;font-weight:600;cursor:pointer';
+        deleteButton.addEventListener('click', async () => {
+          if (!window.confirm('Удалить эту находку с общей карты у всех игроков?')) return;
+          deleteButton.disabled = true;
+          deleteButton.textContent = 'Удаляем…';
+          try {
+            await catgoRequest('map_delete_sighting', { sightingId: sighting.id });
+            setSightings((current) => current.filter((item) => String(item.id) !== String(sighting.id)));
+            onMessage('Находка удалена с общей карты у всех игроков.');
+          } catch (error) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = '🗑 Удалить фото';
+            onMessage(error.message || 'Не удалось удалить находку.');
+          }
+        });
+        popupContent.appendChild(deleteButton);
+      }
       if (isGoogle) {
         const marker = new window.google.maps.Marker({
           map, position: { lat: Number(sighting.latitude), lng: Number(sighting.longitude) },
           title, label: '🐈',
         });
-        const info = new window.google.maps.InfoWindow({ content: popupHtml });
+        const info = new window.google.maps.InfoWindow({ content: popupContent });
         marker.addListener('click', () => info.open({ map, anchor: marker }));
         markers.push({ remove: () => marker.setMap(null) });
       } else {
         const element = document.createElement('div');
         element.className = 'catgo-map-cat-pin';
         element.innerHTML = '<span>🐈</span>';
+        const popup = new maplibregl.Popup({ offset: 24 }).setDOMContent(popupContent);
         const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
           .setLngLat([Number(sighting.longitude), Number(sighting.latitude)])
-          .setPopup(new maplibregl.Popup({ offset: 24 }).setHTML(popupHtml))
+          .setPopup(popup)
           .addTo(map);
         markers.push(marker);
       }
     });
     return () => { markers.forEach((marker) => marker.remove()); };
-  }, [sightings, backendReady, mapReady]);
+  // onMessage is a stable setter wrapper for this popup action; avoid recreating all markers on every parent render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sightings, backendReady, mapReady, isMapAdmin]);
 
   function locateMe() {
     if (!navigator.geolocation) {
