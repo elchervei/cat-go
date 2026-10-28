@@ -1469,7 +1469,7 @@ function App() {
                 <strong>{mission.title}</strong><p>{mission.description}</p>
                 <small className="muted">{[mission.target_color, mission.target_pattern, mission.target_trait].filter(Boolean).join(' · ')}</small>
               </div>
-              <span className="mission-reward"><Zap size={14} /> +{mission.reward_xp} XP</span>
+              <span className="mission-reward">ИИ</span>
             </div>
           ))}
           <div className="note-card"><Heart size={18} /><p>Держи дистанцию, не используй вспышку и не фотографируй кота, если он выглядит напуганным.</p></div>
