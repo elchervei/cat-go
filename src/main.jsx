@@ -522,7 +522,10 @@ function App() {
   const ownerPreview = String(TG?.initDataUnsafe?.user?.username || '').toLowerCase() === 'elchervei';
 
   const [cards, setCards] = useState(() => readJSON(playerStorageKey(STORE_KEY), []));
-  const [xp, setXp] = useState(() => Number(localStorage.getItem(playerStorageKey(XP_KEY)) || 0));
+  const [xp, setXp] = useState(() => {
+    const storedXP = Number(localStorage.getItem(playerStorageKey(XP_KEY)) || 0);
+    return Number.isFinite(storedXP) && storedXP >= 0 ? storedXP : 0;
+  });
   const [missions, setMissions] = useState(() =>
     readJSON(playerStorageKey(MISSION_KEY), { photo: 0, days: 0 })
   );
