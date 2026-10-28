@@ -114,6 +114,14 @@ function readJSON(key, fallback) {
   }
 }
 
+function writeStorage(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // The server remains the source of truth if the browser cache is full.
+  }
+}
+
 function compressImage(file, maxSide = 1280, quality = 0.78) {
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
@@ -287,22 +295,22 @@ function App() {
 
   useEffect(() => {
     if (TG?.initData && !serverReady) return;
-    localStorage.setItem(playerStorageKey(STORE_KEY), JSON.stringify(cards));
+    writeStorage(playerStorageKey(STORE_KEY), JSON.stringify(cards));
   }, [cards, serverReady]);
 
   useEffect(() => {
     if (TG?.initData && !serverReady) return;
-    localStorage.setItem(playerStorageKey(XP_KEY), String(xp));
+    writeStorage(playerStorageKey(XP_KEY), String(xp));
   }, [xp, serverReady]);
 
   useEffect(() => {
     if (TG?.initData && !serverReady) return;
-    localStorage.setItem(playerStorageKey(MISSION_KEY), JSON.stringify(missions));
+    writeStorage(playerStorageKey(MISSION_KEY), JSON.stringify(missions));
   }, [missions, serverReady]);
 
   useEffect(() => {
     if (TG?.initData && !serverReady) return;
-    localStorage.setItem(
+    writeStorage(
       playerStorageKey(PROFILE_KEY),
       JSON.stringify({ ...profile, showcase_card_ids: showcaseIds })
     );
