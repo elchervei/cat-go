@@ -211,28 +211,45 @@ Deno.serve(async (req) => {
                 },
             });
             let geminiResponse: Response;
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 25000);
-            try {
-                geminiResponse = await fetch(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "x-goog-api-key": apiKey,
+            const models = ["gemini-3.8-flash", "gemini-3.6-flash"];
+            let lastFetchError: unknown = null;
+            for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
+                try {
+                    geminiResponse = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${models[modelIndex]}:generateContent`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "x-goog-api-key": apiKey,
+                            },
+                            body: geminiRequestBody,
+                            signal: controller.signal,
                         },
-                        body: geminiRequestBody,
-                        signal: controller.signal,
-                    },
-                );
-            } catch (error) {
-                console.error("Gemini request failed or timed out:", error);
-                return json({
-                    error: "Сервис распознавания не ответил за 25 секунд. Попробуй ещё раз чуть позже.",
-                }, 504);
-            } finally {
-                clearTimeout(timeoutId);
+                    );
+                } catch (error) {
+                    lastFetchError = error;
+                    console.error("Gemini request failed or timed out for model:", models[modelIndex], error);
+                    if (modelIndex < models.length - 1) {
+                        console.warn("Trying fallback Gemini model:", models[modelIndex + 1]);
+                        continue;
+                    }
+                    return json({
+                        error: "Сервис распознавания не ответил за 25 секунд. Попробуй ещё раз чуть позже.",
+                    }, 504);
+                } finally {
+                    clearTimeout(timeoutId);
+                }
+                if (geminiResponse.ok) break;
+                const shouldFallback = [429, 500, 502, 503, 504].includes(geminiResponse.status);
+                if (shouldFallback && modelIndex < models.length - 1) {
+                    const details = await geminiResponse.text();
+                    console.warn("Primary Gemini model unavailable; trying fallback:", models[modelIndex], geminiResponse.status, details.slice(0, 300));
+                    continue;
+                }
+                break;
             }
             if (!geminiResponse.ok) {
                 const details = await geminiResponse.text();
