@@ -101,8 +101,9 @@ const avatarAccessories = [
 ];
 
 function playerStorageKey(key) {
-  const telegramId = TG?.initDataUnsafe?.user?.id;
-  return telegramId ? `${key}_tg_${telegramId}` : key;
+  if (!TG?.initData) return key;
+  const telegramId = TG?.initDataUnsafe?.user?.id || 'unknown';
+  return `${key}_tg_${telegramId}`;
 }
 
 function readJSON(key, fallback) {
