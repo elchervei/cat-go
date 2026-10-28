@@ -518,6 +518,12 @@ function App() {
   const [savingCard, setSavingCard] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [tab, setTab] = useState('home');
+  const [language, setLanguage] = useState(() => localStorage.getItem('catgo_language') || 'ru');
+  const [darkTheme, setDarkTheme] = useState(() => localStorage.getItem('catgo_theme') !== 'light');
+  const isEnglish = language === 'en';
+  const t = (ru, en) => isEnglish ? en : ru;
+  useEffect(() => { localStorage.setItem('catgo_language', language); }, [language]);
+  useEffect(() => { localStorage.setItem('catgo_theme', darkTheme ? 'dark' : 'light'); }, [darkTheme]);
   const ownerPreview = String(TG?.initDataUnsafe?.user?.username || '').toLowerCase() === 'elchervei';
 
   const [cards, setCards] = useState(() => readJSON(playerStorageKey(STORE_KEY), []));
@@ -1091,11 +1097,11 @@ function App() {
     backgrounds[profileBackground] || backgrounds.lavender;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${darkTheme ? 'theme-dark' : 'theme-light'}`} data-theme={darkTheme ? 'dark' : 'light'}>
       <header className="topbar">
         <div className="brand-mark"><Cat size={25} strokeWidth={2.4} /></div>
         <div className="brand-copy">
-          <strong>Cat Go</strong><span>кошачья экспедиция</span>
+          <strong>Cat Go</strong><span>{t('кошачья экспедиция', 'CAT ADVENTURE')}</span>
         </div>
         <button className="icon-button" aria-label="О проекте" onClick={() => setShowInfo(true)}>
           <CircleHelp size={21} />
@@ -1367,6 +1373,32 @@ function App() {
             </>
           )}
           <p className="privacy-note"><Info size={15} /> Бэкап содержит данные карточек и фотографии.</p>
+        </main>
+      )}
+
+      {tab === 'settings' && (
+        <main className="page settings-page">
+          <section className="section-head">
+            <div><span className="eyebrow">CAT GO</span><h1><Settings size={25} /> {t('Настройки', 'Settings')}</h1><p className="muted">{t('Настрой внешний вид и язык игры.', 'Personalize the look and language of the game.')}</p></div>
+          </section>
+          <section className="settings-panel">
+            <div className="settings-row">
+              <span className="settings-icon"><Languages size={21} /></span>
+              <div className="settings-copy"><strong>{t('Язык интерфейса', 'Interface language')}</strong><small>{t('Английский перевод постепенно расширяется.', 'English translation is being expanded.')}</small></div>
+            </div>
+            <div className="settings-choice-row">
+              <button className={language === 'ru' ? 'settings-choice selected' : 'settings-choice'} onClick={() => setLanguage('ru')}>🇷🇺 Русский</button>
+              <button className={language === 'en' ? 'settings-choice selected' : 'settings-choice'} onClick={() => setLanguage('en')}>🇬🇧 English</button>
+            </div>
+          </section>
+          <section className="settings-panel">
+            <div className="settings-row">
+              <span className="settings-icon">{darkTheme ? <Moon size={21} /> : <Sun size={21} />}</span>
+              <div className="settings-copy"><strong>{t('Тёмное оформление', 'Dark theme')}</strong><small>{t('Тёмный фон и мягкие фиолетовые акценты.', 'Dark background with soft violet accents.')}</small></div>
+              <button className={darkTheme ? 'theme-switch enabled' : 'theme-switch'} role="switch" aria-checked={darkTheme} onClick={() => setDarkTheme((value) => !value)}><span /></button>
+            </div>
+          </section>
+          <div className="settings-hint"><Sparkles size={18} /><p>{t('Английский пока доступен на главной и в настройках. Перевод остальных экранов добавим следующим этапом.', 'English is currently available on Home and Settings. The remaining screens will be translated in the next step.')}</p></div>
         </main>
       )}
 
@@ -1766,11 +1798,12 @@ function App() {
 
       <nav className="bottom-nav">
         {[
-          ['home', Compass, 'Главная'],
-          ['collection', Cat, 'Коллекция'],
-          ['map', MapPin, 'Карта'],
-          ['friends', Users, 'Друзья'],
-          ['profile', UserRound, 'Профиль'],
+          ['home', Compass, t('Главная', 'Home')],
+          ['collection', Cat, t('Коллекция', 'Collection')],
+          ['map', MapPin, t('Карта', 'Map')],
+          ['friends', Users, t('Друзья', 'Friends')],
+          ['profile', UserRound, t('Профиль', 'Profile')],
+          ['settings', Settings, t('Настройки', 'Settings')],
         ].map(([id, Icon, label]) => (
           <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
             <Icon size={21} strokeWidth={tab === id ? 2.5 : 1.9} />
