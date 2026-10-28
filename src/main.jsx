@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
-  PawPrint, RotateCcw, Sparkles, Trophy, UserRound, X, Zap, Heart,
+  PawPrint, RotateCcw, Sparkles, UserRound, X, Zap, Heart,
   Shield, Trash2, Download, Info, Users, UserPlus, Search,
   Save, Palette, Pencil, Copy, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed
 } from 'lucide-react';
@@ -1367,65 +1367,6 @@ function App() {
             </>
           )}
           <p className="privacy-note"><Info size={15} /> Бэкап содержит данные карточек и фотографии.</p>
-        </main>
-      )}
-
-      {tab === 'missions' && (
-        <main className="page">
-          <section className="section-head">
-            <div><span className="eyebrow">МАЛЕНЬКИЕ ПРИКЛЮЧЕНИЯ</span><h1>Задания</h1><p className="muted">Собирай воспоминания, а не гоняйся за котиками.</p></div>
-          </section>
-          <div className="mission-card">
-            <div className="mission-icon peach"><Camera size={22} /></div>
-            <div className="mission-content">
-              <strong>Первая встреча</strong><p>Добавь фото кота в коллекцию.</p>
-              <div className="mission-progress">
-                <span>{Math.min(missions.photo || 0, 1)} / 1</span>
-                <div className="progress"><i style={{ width: `${Math.min((missions.photo || 0) * 100, 100)}%` }} /></div>
-              </div>
-            </div>
-            <span className="mission-reward"><Zap size={14} /> +20 XP</span>
-          </div>
-          <div className="mission-card">
-            <div className="mission-icon lilac"><PawPrint size={22} /></div>
-            <div className="mission-content">
-              <strong>Коллекционер</strong><p>Собери 5 карточек котов.</p>
-              <div className="mission-progress">
-                <span>{Math.min(cards.length, 5)} / 5</span>
-                <div className="progress"><i style={{ width: `${Math.min(cards.length / 5 * 100, 100)}%` }} /></div>
-              </div>
-            </div>
-            <span className="mission-reward"><Zap size={14} /> +50 XP</span>
-          </div>
-          <div className="mission-card">
-            <div className="mission-icon mint"><Compass size={22} /></div>
-            <div className="mission-content">
-              <strong>Наблюдатель</strong><p>Сделай три фотографии котов.</p>
-              <div className="mission-progress">
-                <span>{Math.min(missions.photo || 0, 3)} / 3</span>
-                <div className="progress"><i style={{ width: `${Math.min((missions.photo || 0) / 3 * 100, 100)}%` }} /></div>
-              </div>
-            </div>
-            <span className="mission-reward"><Zap size={14} /> +30 XP</span>
-          </div>
-          <section className="section-head smart-mission-head">
-            <div><span className="eyebrow">ПЕРСОНАЛЬНЫЕ ИСПЫТАНИЯ</span><h2>Задания от ИИ</h2><p className="muted">ИИ учитывает окрасы и признаки из твоей коллекции.</p></div>
-            <button className="secondary-button" onClick={generateSmartMissions} disabled={loadingSmartMissions || !serverReady}>
-              <Sparkles size={16} /> {loadingSmartMissions ? 'Подбираю…' : smartMissions.length ? 'Обновить' : 'Подобрать'}
-            </button>
-          </section>
-          {smartMissionMessage && <div className="note-card"><Info size={18} /><p>{smartMissionMessage}</p></div>}
-          {smartMissions.map((mission) => (
-            <div className="mission-card smart-mission-card" key={mission.id}>
-              <div className="mission-icon lilac"><Sparkles size={22} /></div>
-              <div className="mission-content">
-                <strong>{mission.title}</strong><p>{mission.description}</p>
-                <small className="muted">{[mission.target_color, mission.target_pattern, mission.target_trait].filter(Boolean).join(' · ')}</small>
-              </div>
-              <span className="mission-reward">ИИ</span>
-            </div>
-          ))}
-          <div className="note-card"><Heart size={18} /><p>Держи дистанцию, не используй вспышку и не фотографируй кота, если он выглядит напуганным.</p></div>
         </main>
       )}
 
