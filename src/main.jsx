@@ -1870,7 +1870,7 @@ function App() {
             )}
             {previewCosmetic.type === 'frame' && (
               <div className="cosmetic-large-preview" style={{ background: backgrounds[profileBackground] || backgrounds.lavender }}>
-                <div className={`cosmetic-large-avatar cosmetic-avatar ${previewCosmetic.style}`}>🐈</div>
+                <div className={`cosmetic-large-frame ${previewCosmetic.style}`}><div className="cosmetic-large-avatar cosmetic-avatar">🐈</div></div>
                 <strong>{profile.display_name || t('Котоисследователь','Cat explorer')}</strong><small>@{profile.username || 'cat_explorer'}</small>
               </div>
             )}
