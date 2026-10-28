@@ -4,7 +4,7 @@ import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, Trophy, UserRound, X, Zap, Heart,
   Shield, Trash2, Download, Info, Users, UserPlus, Search,
-  Save, Palette, Pencil, UserCheck, UserX, Store, Lock, CheckCircle2
+  Save, Palette, Pencil, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed
 } from 'lucide-react';
 import './style.css';
 
@@ -181,6 +181,7 @@ const emptyProfile = {
 
 function App() {
   const [serverReady, setServerReady] = useState(false);
+  const [profileSyncDone, setProfileSyncDone] = useState(false);
   const [savingCard, setSavingCard] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [tab, setTab] = useState('home');
@@ -229,62 +230,54 @@ function App() {
         setProfileAvatar(profile.avatar_url || '');
         setProfileBackground(profile.background_key || 'lavender');
         setServerReady(true);
+        setProfileSyncDone(true);
         return;
       }
 
       try {
-        // Load only essential game data before showing the app.
-        // Friends and requests are fetched after the first screen is ready.
-        const [cardsResult, profileResult] = await Promise.allSettled([
-          catgoRequest('get_cards'),
-          catgoRequest('profile'),
-        ]);
-
+        // The collection is essential. Do not make the whole game wait for profile/social calls.
+        const cardsResult = await Promise.allSettled([catgoRequest('get_cards')]);
         if (cancelled) return;
-        if (cardsResult.status === 'rejected') throw cardsResult.reason;
+        if (cardsResult[0].status === 'rejected') throw cardsResult[0].reason;
 
-        const loadedCards = (cardsResult.value.cards || [])
+        const loadedCards = (cardsResult[0].value.cards || [])
           .map((row) => row.card_data || row)
           .filter((card) => card && card.id);
 
         setCards(loadedCards);
         setXp(loadedCards.reduce((sum, card) => sum + Number(card.xp || 0), 0));
         setMissions({ photo: loadedCards.length, days: 0 });
+        setServerReady(true);
 
-        if (profileResult.status === 'fulfilled') {
+        // Profile and social data update in the background, after the game is usable.
+        catgoRequest('profile').then((result) => {
+          if (cancelled) return;
           const cachedProfile = readJSON(playerStorageKey(PROFILE_KEY), emptyProfile);
-          const p = { ...cachedProfile, ...(profileResult.value.profile || {}) };
+          const p = { ...cachedProfile, ...(result.profile || {}) };
           setProfile({ ...emptyProfile, ...p });
-          setShowcaseIds(
-            Array.isArray(p.showcase_card_ids) ? p.showcase_card_ids : []
-          );
+          setShowcaseIds(Array.isArray(p.showcase_card_ids) ? p.showcase_card_ids : []);
           setProfileName(p.display_name || '');
           setProfileAvatar(p.avatar_url || '');
           setProfileBackground(p.background_key || 'lavender');
-        } else {
-          setMessage(
-            `Не удалось загрузить профиль: ${profileResult.reason?.message || 'ошибка'}`
-          );
-        }
-
-        setServerReady(true);
+        }).catch((error) => {
+          if (!cancelled) setMessage(`Профиль пока не синхронизирован: ${error.message}`);
+        }).finally(() => {
+          if (!cancelled) setProfileSyncDone(true);
+        });
 
         Promise.allSettled([
           catgoRequest('friends_list'),
           catgoRequest('friend_requests'),
         ]).then(([friendsResult, requestsResult]) => {
           if (cancelled) return;
-          if (friendsResult.status === 'fulfilled') {
-            setFriends(friendsResult.value.friends || []);
-          }
-          if (requestsResult.status === 'fulfilled') {
-            setFriendRequests(requestsResult.value.requests || []);
-          }
+          if (friendsResult.status === 'fulfilled') setFriends(friendsResult.value.friends || []);
+          if (requestsResult.status === 'fulfilled') setFriendRequests(requestsResult.value.requests || []);
         });
       } catch (error) {
         if (!cancelled) {
           setMessage(`Не удалось загрузить коллекцию: ${error.message}`);
           setServerReady(true);
+          setProfileSyncDone(true);
         }
       }
     }
@@ -310,12 +303,12 @@ function App() {
   }, [missions, serverReady]);
 
   useEffect(() => {
-    if (TG?.initData && !serverReady) return;
+    if (TG?.initData && !profileSyncDone) return;
     writeStorage(
       playerStorageKey(PROFILE_KEY),
       JSON.stringify({ ...profile, showcase_card_ids: showcaseIds })
     );
-  }, [profile, showcaseIds, serverReady]);
+  }, [profile, showcaseIds, profileSyncDone]);
 
   const level = Math.floor(xp / 100) + 1;
   const nextXP = xp % 100;
@@ -718,12 +711,56 @@ function App() {
         </button>
       </header>
 
-      {!serverReady && <div className="sync-banner"><span className="sync-dot" /> Синхронизируем профиль и коллекцию…</div>}
+      {(!serverReady || !profileSyncDone) && <div className="sync-banner"><span className="sync-dot" /> {!serverReady ? 'Загружаем коллекцию…' : 'Обновляем профиль в фоне…'}</div>}
 
       {message && (
         <button className="toast" onClick={() => setMessage('')}>
           {message}<X size={16} />
         </button>
+      )}
+
+      {tab === 'map' && (
+        <main className="page map-page">
+          <section className="section-head">
+            <div>
+              <span className="eyebrow">КОШАЧЬЯ ЭКСПЕДИЦИЯ</span>
+              <h1><MapPin size={26} /> Карта находок</h1>
+              <p className="muted">Общее пространство, где игроки смогут делиться встречами с котами.</p>
+            </div>
+          </section>
+
+          <section className="map-preview-panel">
+            <div className="map-preview-grid" aria-hidden="true" />
+            <div className="map-preview-road road-one" />
+            <div className="map-preview-road road-two" />
+            <div className="map-preview-road road-three" />
+            <div className="map-preview-park"><span>🌳</span><span>🌿</span><span>🌳</span></div>
+            <div className="map-preview-pin pin-one"><MapPin size={23} fill="currentColor" /><span>🐈</span></div>
+            <div className="map-preview-pin pin-two"><MapPin size={23} fill="currentColor" /><span>🐈</span></div>
+            <div className="map-preview-pin pin-three"><MapPin size={23} fill="currentColor" /><span>🐈</span></div>
+            <div className="map-preview-center">
+              <span className="map-preview-icon"><Layers size={23} /></span>
+              <strong>Карта готовится</strong>
+              <small>Это предварительный макет, не настоящая карта</small>
+            </div>
+          </section>
+
+          <section className="map-info-card">
+            <span className="map-info-icon"><LocateFixed size={20} /></span>
+            <div>
+              <strong>Что появится на карте</strong>
+              <p>Игроки смогут отмечать место встречи с котом, добавлять фото, а остальные — открывать метки и смотреть находки.</p>
+            </div>
+          </section>
+
+          <section className="map-steps">
+            <h2>План внедрения</h2>
+            <div><span>1</span><p><strong>Публикация находки</strong><small>Фото кота и выбранная точка на карте.</small></p></div>
+            <div><span>2</span><p><strong>Общая карта игроков</strong><small>Метки загружаются из общей базы данных.</small></p></div>
+            <div><span>3</span><p><strong>Карточка по нажатию</strong><small>Фото, имя кота и дата встречи.</small></p></div>
+          </section>
+          <div className="note-card"><Info size={18} /><p>Карта пока демонстрационная: геолокация не запрашивается и находки ещё не публикуются. Следующим этапом подключим настоящую карту и базу общих меток.</p></div>
+        </main>
       )}
 
       {tab === 'home' && (
@@ -1050,7 +1087,7 @@ function App() {
             <button className="secondary-button full" onClick={() => setTab('shop')}>
               <Store size={17} /> Открыть магазин фонов
             </button>
-            <button className="primary-button full" onClick={saveProfile} disabled={savingProfile || !serverReady}>
+            <button className="primary-button full" onClick={saveProfile} disabled={savingProfile || !serverReady || !profileSyncDone}>
               <Save size={18} /> {savingProfile ? 'Сохраняю…' : !serverReady ? 'Синхронизация…' : 'Сохранить профиль'}
             </button>
           </section>
@@ -1394,6 +1431,7 @@ function App() {
         {[
           ['home', Compass, 'Главная'],
           ['collection', Cat, 'Коллекция'],
+          ['map', MapPin, 'Карта'],
           ['friends', Users, 'Друзья'],
           ['missions', Trophy, 'Задания'],
           ['profile', UserRound, 'Профиль'],
