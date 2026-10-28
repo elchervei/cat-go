@@ -535,6 +535,7 @@ function App() {
   const [draft, setDraft] = useState(null);
   const [catAnalysis, setCatAnalysis] = useState(null);
   const [analyzingCat, setAnalyzingCat] = useState(false);
+  const [pendingPhotoHash, setPendingPhotoHash] = useState('');
   const [showInfo, setShowInfo] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -711,17 +712,20 @@ function App() {
       }
       setPhoto(compressed);
       setFileName(file.name);
+      setPendingPhotoHash(photoHash);
       setCatAnalysis(null);
-      setDraft({ photoHash });
+      setDraft(null);
       setTab('camera');
-      setMessage('Фото готово. Теперь создай карточку.');
+      setMessage('Фото загружено. Автоматически определяю кота…');
+      void analyzeCatPhoto(compressed);
     } catch (error) {
       setMessage(error.message || 'Не удалось открыть фото.');
     }
   }
 
-  async function analyzeCatPhoto() {
-    if (!photo || analyzingCat) return;
+  async function analyzeCatPhoto(photoOverride) {
+    const photoToAnalyze = photoOverride || photo;
+    if (!photoToAnalyze || analyzingCat) return;
     if (!TG?.initData) {
       setMessage('Открой Cat Go через Telegram, чтобы распознать кота.');
       return;
@@ -730,8 +734,8 @@ function App() {
     setCatAnalysis(null);
     setMessage('ИИ изучает фотографию…');
     try {
-      const result = await catgoRequest('analyze_cat_photo', { photo_data_url: photo });
-      setCatAnalysis({ ...result.analysis, photo });
+      const result = await catgoRequest('analyze_cat_photo', { photo_data_url: photoToAnalyze });
+      setCatAnalysis({ ...result.analysis, photo: photoToAnalyze });
       if (result.analysis?.is_cat) {
         setMessage('Кот найден! Проверь описание и создай карточку.');
       } else {
@@ -756,7 +760,7 @@ function App() {
       name: '',
       createdAt: Date.now(),
       photo,
-      photoHash: draft?.photoHash || '',
+      photoHash: pendingPhotoHash,
       catTraits: {
         coat_color: catAnalysis.coat_color,
         pattern: catAnalysis.pattern,
@@ -792,6 +796,7 @@ function App() {
     const cardToSave = {
       ...draft,
       id: typeof draft.id === 'string' && draft.id.trim() ? draft.id : (crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`),
+      xp: Number.isFinite(Number(draft.xp)) ? Number(draft.xp) : 10,
       name: finalName,
     };
     setSavingCard(true);
@@ -802,12 +807,14 @@ function App() {
         await catgoRequest('save_card', { card: cardToSave });
       }
       setCards((previous) => [cardToSave, ...previous]);
-      setXp((previous) => previous + cardToSave.xp);
+      setXp((previous) => (Number.isFinite(Number(previous)) ? Number(previous) : 0) + cardToSave.xp);
       setMissions((previous) => ({
         ...previous,
         photo: (previous.photo || 0) + 1,
       }));
       setPhoto('');
+      setPendingPhotoHash('');
+      setCatAnalysis(null);
       setDraft(null);
       setTab('collection');
       setMessage(`Кот «${finalName}» добавлен! +${cardToSave.xp} XP`);
