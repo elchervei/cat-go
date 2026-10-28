@@ -907,3 +907,6 @@
 [data-theme="dark"] .shop-item-body strong,
 [data-theme="dark"] .shop-item-body small { color:#f0edf8; }
 [data-theme="dark"] .owner-preview-note { background:#2d2440; color:#d3baff; border-color:#574474; }
+
+body:has(.app-shell[data-theme="dark"]) { background:#17151f; }
+body:has(.app-shell[data-theme="light"]) { background:#fffaf5; }
