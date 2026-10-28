@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, Trophy, UserRound, X, Zap, Heart,
-  Shield, Footprints, Trash2, Download, Info, Users, UserPlus, Search,
+  Shield, Trash2, Download, Info, Users, UserPlus, Search,
   Save, Palette, Pencil, UserCheck, UserX
 } from 'lucide-react';
 import './style.css';
@@ -70,10 +70,6 @@ const backgroundLabels = {
   night: 'Ночь',
   peach: 'Персик',
 };
-
-function rand(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
 
 function readJSON(key, fallback) {
   try {
