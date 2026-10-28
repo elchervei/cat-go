@@ -767,3 +767,143 @@
 .sighting-photo-preview { display: block; width: 100%; max-height: 260px; object-fit: contain; border-radius: 12px; background: #f5f1ee; }
 .sighting-description { width: 100%; min-height: 84px; resize: vertical; }
 .sighting-publish-card .privacy-note { line-height: 1.45; }
+
+
+/* Cat Go settings + cohesive dark theme */
+.settings-panel {
+  margin: 14px 0;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface, #fff);
+}
+.settings-row { display:flex; align-items:center; gap:12px; }
+.settings-icon { width:42px; height:42px; flex:0 0 42px; display:grid; place-items:center; border-radius:14px; background:#eee7ff; color:#9273d4; }
+.settings-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:4px; }
+.settings-copy strong { font-size:14px; font-weight:900; }
+.settings-copy small { color:var(--muted); font-size:11px; line-height:1.45; }
+.settings-choice-row { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:15px; }
+.settings-choice { padding:12px 8px; border:1px solid var(--line); border-radius:13px; background:var(--surface, #fff); color:var(--ink); font-size:12px; font-weight:900; }
+.settings-choice.selected { border-color:#a58ae8; background:#eee7ff; color:#6d50b5; box-shadow:0 0 0 2px #a58ae822; }
+.theme-switch { width:48px; height:28px; flex:0 0 48px; padding:3px; border-radius:99px; background:#b7b0c6; transition:background .2s; }
+.theme-switch span { display:block; width:22px; height:22px; border-radius:50%; background:white; box-shadow:0 2px 5px #0002; transition:transform .2s; }
+.theme-switch.enabled { background:#9273d4; }
+.theme-switch.enabled span { transform:translateX(20px); }
+.settings-hint { display:flex; align-items:flex-start; gap:10px; padding:14px; border:1px solid #66508e66; border-radius:16px; background:#211c30; color:#bca5f5; }
+.settings-hint p { margin:0; color:#c8bfdc; font-size:11px; line-height:1.55; }
+[data-theme="dark"] {
+  color-scheme:dark;
+  --ink:#f0edf8;
+  --muted:#aaa4bb;
+  --line:#353044;
+  --peach:#ff9b86;
+  --cream:#17151f;
+  --surface:#211e2b;
+  background:#17151f;
+  color:#f0edf8;
+}
+[data-theme="dark"] .app-shell { background:#17151f; color:#f0edf8; }
+[data-theme="dark"] body { background:#17151f; }
+[data-theme="dark"] .topbar { background:rgba(23,21,31,.92); border-color:#353044; }
+[data-theme="dark"] .brand-mark { background:linear-gradient(135deg,#9b7aea,#ef8fbc); box-shadow:0 5px 18px #9b7aea35; }
+[data-theme="dark"] .icon-button,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .action-card,
+[data-theme="dark"] .camera-empty,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .draft-card,
+[data-theme="dark"] .cat-card,
+[data-theme="dark"] .profile-stat-row,
+[data-theme="dark"] .profile-editor,
+[data-theme="dark"] .panel,
+[data-theme="dark"] .friend-search-form,
+[data-theme="dark"] .map-selection-card,
+[data-theme="dark"] .map-steps>div,
+[data-theme="dark"] .sighting-publish-card,
+[data-theme="dark"] .settings-panel,
+[data-theme="dark"] .info-modal { background:#211e2b; border-color:#353044; color:#f0edf8; }
+[data-theme="dark"] .bottom-nav { background:rgba(29,26,39,.96); border-color:#353044; box-shadow:0 -8px 28px #0002; }
+[data-theme="dark"] .bottom-nav button { color:#827b96; }
+[data-theme="dark"] .bottom-nav button.active { color:#c1a5ff; }
+[data-theme="dark"] .nav-dot { background:#c1a5ff; }
+[data-theme="dark"] .hero-card { background:radial-gradient(circle at 87% 32%,#51416e 0,#30273f 35%,#24202f 76%); border:1px solid #4b3c60; box-shadow:0 12px 34px #0003; }
+[data-theme="dark"] .hero-card h1 { color:#f7f1ff; }
+[data-theme="dark"] .hero-card h1 em { color:#d4b6ff; }
+[data-theme="dark"] .hero-card p { color:#c0b4d0; }
+[data-theme="dark"] .hero-card .eyebrow { color:#c6a9f5; }
+[data-theme="dark"] .sun { background:#ad8de7; opacity:.55; }
+[data-theme="dark"] .sparkle { color:#e0c5ff; }
+[data-theme="dark"] .hero-caption { color:#e3d1ff; }
+[data-theme="dark"] .primary-button { background:linear-gradient(135deg,#a58ae8,#8b6bd0); color:#fff; box-shadow:0 6px 18px #8b6bd044; }
+[data-theme="dark"] .secondary-button,
+[data-theme="dark"] .collection-summary button,
+[data-theme="dark"] .small-action { background:#2c273a; color:#d8cdec; border-color:#403751; }
+[data-theme="dark"] .action-card strong,
+[data-theme="dark"] .stat-card strong,
+[data-theme="dark"] .section-head h1,
+[data-theme="dark"] .section-head h2,
+[data-theme="dark"] .profile-editor h2,
+[data-theme="dark"] .friends-section h2,
+[data-theme="dark"] .map-steps h2,
+[data-theme="dark"] .settings-copy strong,
+[data-theme="dark"] .map-selection-card strong,
+[data-theme="dark"] .map-steps strong,
+[data-theme="dark"] .cat-card-body h3,
+[data-theme="dark"] .draft-card h2 { color:#f0edf8; }
+[data-theme="dark"] .eyebrow { color:#bba0ef; }
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .muted,
+[data-theme="dark"] .privacy-note,
+[data-theme="dark"] .action-card small,
+[data-theme="dark"] .stat-card small,
+[data-theme="dark"] .cat-card-meta,
+[data-theme="dark"] .mini-traits span,
+[data-theme="dark"] .profile-stat-row span,
+[data-theme="dark"] .field-label,
+[data-theme="dark"] .friend-details span { color:#aaa4bb; }
+[data-theme="dark"] .progress { background:#393246; }
+[data-theme="dark"] .progress i { background:linear-gradient(90deg,#bd9cff,#f09acb); }
+[data-theme="dark"] .pink,
+[data-theme="dark"] .peach { background:#422c40; color:#ffb1bc; }
+[data-theme="dark"] .yellow { background:#423620; color:#f4c875; }
+[data-theme="dark"] .lilac { background:#352b4b; color:#c4a8ff; }
+[data-theme="dark"] .mint { background:#203b36; color:#80d8b5; }
+[data-theme="dark"] .camera-art { background:#35283e; color:#ffadbf; }
+[data-theme="dark"] .photo-preview,
+[data-theme="dark"] .cat-photo,
+[data-theme="dark"] .sighting-photo-preview { background:#17151f; }
+[data-theme="dark"] .draft-card,
+[data-theme="dark"] .profile-editor,
+[data-theme="dark"] .panel { box-shadow:0 8px 24px #0002; }
+[data-theme="dark"] .trait-head,
+[data-theme="dark"] .trait-head b { color:#d8d0e8; }
+[data-theme="dark"] .trait-bar { background:#393246; }
+[data-theme="dark"] .mini-traits { border-color:#393246; }
+[data-theme="dark"] .field-input { background:#191722; border-color:#403751; color:#f0edf8; }
+[data-theme="dark"] .field-input::placeholder { color:#7f7891; }
+[data-theme="dark"] .friend-row { border-color:#353044; }
+[data-theme="dark"] .friend-avatar { background:#342b45; }
+[data-theme="dark"] .note-card { background:#302638; color:#e0b0f5; }
+[data-theme="dark"] .note-card p { color:#d1bfd9; }
+[data-theme="dark"] .tip-card { background:#332738; color:#ffb0c1; }
+[data-theme="dark"] .tip-card strong { color:#f4dce9; }
+[data-theme="dark"] .tip-card small { color:#c5a9bd; }
+[data-theme="dark"] .map-info-card { background:#211e2b; border-color:#353044; }
+[data-theme="dark"] .map-info-icon { background:#203b36; color:#80d8b5; }
+[data-theme="dark"] .map-info-card strong { color:#f0edf8; }
+[data-theme="dark"] .map-steps>div>span { background:#352b4b; color:#c4a8ff; }
+[data-theme="dark"] .real-cat-map { border-color:#353044; }
+[data-theme="dark"] .sync-banner { background:#302638; color:#cbbce0; }
+[data-theme="dark"] .settings-choice { background:#191722; color:#ddd5ec; border-color:#403751; }
+[data-theme="dark"] .settings-choice.selected { background:#392d52; color:#d7c3ff; border-color:#a58ae8; }
+[data-theme="dark"] .settings-hint { background:#211b30; }
+[data-theme="dark"] .profile-edit-hero { color:#30253e; }
+[data-theme="dark"] .profile-edit-hero .muted { color:#554866; }
+[data-theme="dark"] .modal-backdrop { background:#08060dcc; }
+[data-theme="dark"] .modal-close { background:#302b3d; color:#e0d8ee; border-color:#494057; }
+[data-theme="dark"] .toast { background:#ded3ff; color:#241b34; }
+[data-theme="dark"] .shop-level-card,
+[data-theme="dark"] .shop-item { background:#211e2b; border-color:#353044; color:#f0edf8; }
+[data-theme="dark"] .shop-item-body strong,
+[data-theme="dark"] .shop-item-body small { color:#f0edf8; }
+[data-theme="dark"] .owner-preview-note { background:#2d2440; color:#d3baff; border-color:#574474; }
