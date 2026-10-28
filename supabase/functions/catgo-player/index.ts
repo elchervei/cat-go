@@ -211,30 +211,28 @@ Deno.serve(async (req) => {
                         },
                     });
             let geminiResponse: Response;
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    geminiResponse = await fetch(
-                        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "x-goog-api-key": apiKey,
-                            },
-                            body: geminiRequestBody,
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
+            try {
+                geminiResponse = await fetch(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-goog-api-key": apiKey,
                         },
-                    );
-                } catch (error) {
-                    console.warn("Gemini request failed:", attempt, error);
-                    if (attempt === 3) throw error;
-                    await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
-                    continue;
-                }
-                const retryable = [429, 500, 502, 503, 504].includes(geminiResponse.status);
-                if (!retryable || attempt === 3) break;
-                const retryDetails = await geminiResponse.text();
-                console.warn("Gemini temporary error; retrying:", geminiResponse.status, "attempt", attempt, retryDetails.slice(0, 300));
-                await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+                        body: geminiRequestBody,
+                        signal: controller.signal,
+                    },
+                );
+            } catch (error) {
+                console.error("Gemini request failed or timed out:", error);
+                return json({
+                    error: "Сервис распознавания не ответил за 25 секунд. Попробуй ещё раз чуть позже.",
+                }, 504);
+            } finally {
+                clearTimeout(timeoutId);
             }
             if (!geminiResponse.ok) {
                 const details = await geminiResponse.text();
