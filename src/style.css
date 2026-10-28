@@ -325,3 +325,105 @@
   min-width: 0;
   overflow: hidden;
 }
+
+
+/* Магазин косметики за уровни */
+.shop-level-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 16px;
+  margin: 14px 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff;
+}
+.shop-level-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 16px;
+  background: #fff0c9;
+  color: #b27b16;
+}
+.shop-level-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+.shop-level-copy strong { font-size: 15px; }
+.shop-level-copy span { color: var(--muted); font-size: 11px; }
+.shop-level-copy .progress { margin-top: 3px; }
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.shop-item {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  background: white;
+}
+.shop-item.locked { opacity: .82; }
+.shop-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 128px;
+  overflow: hidden;
+}
+.shop-preview-cat {
+  font-size: 65px;
+  filter: drop-shadow(0 7px 5px #00000012);
+}
+.shop-lock, .shop-equipped {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 99px;
+  background: #ffffffed;
+  color: #695d58;
+  font-size: 10px;
+  font-weight: 900;
+}
+.shop-equipped {
+  color: #287a55;
+}
+.shop-item-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  padding: 11px;
+}
+.shop-item-body strong { font-size: 13px; }
+.shop-item-body small {
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.shop-item-body .primary-button,
+.shop-item-body .secondary-button {
+  padding: 10px 7px;
+  font-size: 11px;
+}
+.shop-item-body button:disabled {
+  opacity: .65;
+  cursor: default;
+}
+@media (max-width: 360px) {
+  .shop-grid { gap: 8px; }
+  .shop-preview { min-height: 108px; }
+  .shop-item-body { padding: 8px; }
+}
