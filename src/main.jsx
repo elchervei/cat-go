@@ -240,7 +240,7 @@ function SharedCatMap({ onMessage }) {
     }
     loadSightings();
     return () => { cancelled = true; };
-  }, [onMessage]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
