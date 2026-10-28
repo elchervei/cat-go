@@ -991,3 +991,24 @@ body:has(.app-shell[data-theme="light"]) { background:#fffaf5; }
 .catgo-map-popup-dark .catgo-map-popup-content strong { color:#ffffff; }
 .catgo-map-popup-light .maplibregl-popup-content { color:#262232 !important; background:#ffffff !important; }
 .catgo-map-popup-light .maplibregl-popup-content strong { color:#211b2b !important; }
+
+/* Force the map note itself to use an opaque, readable theme surface. */
+.maplibregl-popup.catgo-map-popup-dark .maplibregl-popup-content,
+.catgo-map-popup-dark .maplibregl-popup-content,
+.gm-style .gm-style-iw-c:has(.catgo-map-popup-content.is-dark) {
+  background: #211e2b !important;
+  color: #f3efff !important;
+  border: 1px solid #494057 !important;
+}
+.maplibregl-popup.catgo-map-popup-dark .maplibregl-popup-tip,
+.catgo-map-popup-dark .maplibregl-popup-tip {
+  border-top-color: #211e2b !important;
+  border-bottom-color: #211e2b !important;
+}
+.maplibregl-popup.catgo-map-popup-light .maplibregl-popup-content,
+.catgo-map-popup-light .maplibregl-popup-content,
+.gm-style .gm-style-iw-c:has(.catgo-map-popup-content.is-light) {
+  background: #ffffff !important;
+  color: #262232 !important;
+}
+.gm-style .gm-style-iw-d { overflow: auto !important; }
