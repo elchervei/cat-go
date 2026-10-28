@@ -243,7 +243,8 @@ function App() {
         setMissions({ photo: loadedCards.length, days: 0 });
 
         if (profileResult.status === 'fulfilled') {
-          const p = profileResult.value.profile || emptyProfile;
+          const cachedProfile = readJSON(playerStorageKey(PROFILE_KEY), emptyProfile);
+          const p = { ...cachedProfile, ...(profileResult.value.profile || {}) };
           setProfile({ ...emptyProfile, ...p });
           setShowcaseIds(
             Array.isArray(p.showcase_card_ids) ? p.showcase_card_ids : []
@@ -1204,7 +1205,10 @@ function App() {
               })}
             </div>
           </section>
-          <div className="note-card"><Sparkles size={18} /><p>Награды открываются за уровень, XP не списывается. Выбери оформление, затем зайди в профиль и нажми «Сохранить профиль».</p></div>
+                    <button className="primary-button full shop-save-button" onClick={saveProfile} disabled={savingProfile || !serverReady}>
+            <Save size={18} /> {savingProfile ? 'Сохраняю…' : 'Сохранить выбранную косметику'}
+          </button>
+          <div className="note-card"><Sparkles size={18} /><p>Награды открываются за уровень, XP не списывается. Выбранные рамка, аксессуар и стиль карточек применяются сразу; нажми кнопку выше, чтобы сохранить их.</p></div>
         </main>
       )}
 
