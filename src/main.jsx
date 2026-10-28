@@ -615,7 +615,7 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
       // Build popup content with DOM APIs so names cannot inject HTML.
       const popupContent = document.createElement('div');
       popupContent.className = `catgo-map-popup-content${darkTheme ? ' is-dark' : ' is-light'}`;
-      popupContent.style.maxWidth = '220px';
+      popupContent.style.cssText = `max-width:220px;padding:12px;border-radius:10px;background:${darkTheme ? '#211e2b' : '#ffffff'};color:${darkTheme ? '#f3efff' : '#262232'};font-size:13px;line-height:1.45;overflow-wrap:anywhere;`;
       if (typeof sighting.photo_url === 'string' && /^https:\/\//.test(sighting.photo_url)) {
         const photo = document.createElement('img');
         photo.src = sighting.photo_url;
@@ -625,11 +625,12 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
       }
       const heading = document.createElement('strong');
       heading.textContent = title;
+      heading.style.cssText = `display:block;color:${darkTheme ? '#ffffff' : '#211b2b'};font-size:14px;font-weight:800;margin-bottom:2px;`;
       popupContent.appendChild(heading);
       if (sighting.created_at) {
         const date = document.createElement('div');
         date.textContent = new Date(sighting.created_at).toLocaleDateString(isEnglish ? 'en-US' : 'ru-RU');
-        date.style.cssText = 'font-size:12px;opacity:.7;margin-top:3px';
+        date.style.cssText = `font-size:12px;color:${darkTheme ? '#c8bfdc' : '#6f6878'};margin-top:3px;`;
         popupContent.appendChild(date);
       }
       if (isMapAdmin) {
