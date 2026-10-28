@@ -533,6 +533,8 @@ function App() {
   const [photo, setPhoto] = useState('');
   const [fileName, setFileName] = useState('');
   const [draft, setDraft] = useState(null);
+  const [catAnalysis, setCatAnalysis] = useState(null);
+  const [analyzingCat, setAnalyzingCat] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -665,6 +667,7 @@ function App() {
     setPhoto('');
     setFileName('');
     setDraft(null);
+    setCatAnalysis(null);
     setTab('camera');
     setMessage('');
   }
@@ -708,6 +711,7 @@ function App() {
       }
       setPhoto(compressed);
       setFileName(file.name);
+      setCatAnalysis(null);
       setDraft({ photoHash });
       setTab('camera');
       setMessage('Фото готово. Теперь создай карточку.');
@@ -716,8 +720,36 @@ function App() {
     }
   }
 
+  async function analyzeCatPhoto() {
+    if (!photo || analyzingCat) return;
+    if (!TG?.initData) {
+      setMessage('Открой Cat Go через Telegram, чтобы распознать кота.');
+      return;
+    }
+    setAnalyzingCat(true);
+    setCatAnalysis(null);
+    setMessage('ИИ изучает фотографию…');
+    try {
+      const result = await catgoRequest('analyze_cat_photo', { photo_data_url: photo });
+      setCatAnalysis({ ...result.analysis, photo });
+      if (result.analysis?.is_cat) {
+        setMessage('Кот найден! Проверь описание и создай карточку.');
+      } else {
+        setMessage('ИИ не смог подтвердить, что на фото кот. Попробуй другое фото.');
+      }
+    } catch (error) {
+      setMessage(`Не удалось распознать фото: ${error.message}`);
+    } finally {
+      setAnalyzingCat(false);
+    }
+  }
+
   function prepareCard() {
     if (!photo) return;
+    if (!catAnalysis?.is_cat || catAnalysis.photo !== photo) {
+      setMessage('Сначала нажми «Определить кота» и дождись проверки фото.');
+      return;
+    }
 
     setDraft({
       id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
@@ -1194,13 +1226,26 @@ function App() {
                 <>
                   <div className="tip-card">
                     <Sparkles size={18} />
-                    <span><strong>Отличный момент!</strong><small>Фото сжато для экономии места. Теперь придумай коту имя.</small></span>
+                    <span><strong>Сначала проверим фото</strong><small>ИИ проверит, что на снимке кот, и определит окрас и рисунок шерсти.</small></span>
                   </div>
+                  {catAnalysis && catAnalysis.photo === photo && (
+                    <div className={`tip-card ${catAnalysis.is_cat ? 'analysis-success' : 'analysis-warning'}`}>
+                      <Sparkles size={18} />
+                      <span>
+                        <strong>{catAnalysis.is_cat ? 'Кот распознан!' : 'Кот не подтверждён'}</strong>
+                        <small>{catAnalysis.is_cat ? catAnalysis.description_ru : 'Загрузи фото, где кот хорошо виден. Рисунки и игрушки не подходят.'}</small>
+                        {catAnalysis.is_cat && <small>Окрас: {catAnalysis.coat_color} · Рисунок: {catAnalysis.pattern} · Шерсть: {catAnalysis.fur_length}{catAnalysis.breed_guess && catAnalysis.breed_guess !== 'не удалось определить' ? ` · Порода: ${catAnalysis.breed_guess}` : ''}</small>}
+                      </span>
+                    </div>
+                  )}
+                  <button className="primary-button full" onClick={analyzeCatPhoto} disabled={analyzingCat || !serverReady}>
+                    <Sparkles size={17} /> {analyzingCat ? 'ИИ проверяет фото…' : catAnalysis?.photo === photo && catAnalysis?.is_cat ? 'Распознать ещё раз' : 'Определить кота'}
+                  </button>
                   <div className="button-row">
                     <button className="secondary-button" onClick={openCamera}>
                       <RotateCcw size={17} /> Переснять
                     </button>
-                    <button className="primary-button" onClick={prepareCard}>
+                    <button className="primary-button" onClick={prepareCard} disabled={!catAnalysis?.is_cat || catAnalysis.photo !== photo}>
                       Создать карточку <ChevronRight size={18} />
                     </button>
                   </div>
@@ -1244,7 +1289,7 @@ function App() {
             onChange={onFile}
           />
           <p className="privacy-note">
-            <Shield size={15} /> Фото сжимаются перед сохранением карточки. Распознавание котов пока не подключено.
+            <Shield size={15} /> Фото отправляется на сервер для проверки ИИ. Ключ доступа хранится только в Supabase, а не в приложении.
           </p>
         </main>
       )}
