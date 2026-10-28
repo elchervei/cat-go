@@ -1398,7 +1398,7 @@ function App() {
               <button className={darkTheme ? 'theme-switch enabled' : 'theme-switch'} role="switch" aria-checked={darkTheme} onClick={() => setDarkTheme((value) => !value)}><span /></button>
             </div>
           </section>
-          <div className="settings-hint"><Sparkles size={18} /><p>{t('Английский пока доступен на главной и в настройках. Перевод остальных экранов добавим следующим этапом.', 'English is currently available on Home and Settings. The remaining screens will be translated in the next step.')}</p></div>
+          <div className="settings-hint"><Sparkles size={18} /><p>{t('Английский уже включён для навигации и основных заголовков. Остальные подписи переведём следующим этапом.', 'English is enabled for navigation and key headings. More screen text will be translated in the next step.')}</p></div>
         </main>
       )}
 
