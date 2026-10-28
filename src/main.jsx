@@ -11,6 +11,84 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 
 
+
+const UI_TRANSLATIONS = {
+  'Главная':'Home','Коллекция':'Collection','Карта':'Map','Друзья':'Friends','Профиль':'Profile','Настройки':'Settings',
+  'кошачья экспедиция':'Cat expedition','КОШАЧЬЯ ЭКСПЕДИЦИЯ':'CAT EXPEDITION','О проекте':'About the project',
+  'Загружаем коллекцию…':'Loading collection…','Обновляем профиль в фоне…':'Updating profile in the background…',
+  'Карта находок':'Discovery map','Общая карта встреч с котами. Геолокация включается только по твоему нажатию.':'A shared map of cat encounters. Location is used only when you choose to enable it.',
+  'котик':'cat','котика':'cats','котиков':'cats','Тут будут твои котики':'Your cats will appear here','Выбранная фотография':'Selected photo',
+  'Кот распознан!':'Cat detected!','Кот не подтверждён':'Cat not confirmed','Загрузи фото, где кот хорошо виден. Рисунки и игрушки не подходят.':'Upload a photo where the cat is clearly visible. Drawings and toys are not accepted.',
+  'не удалось определить':'Could not determine','ИИ проверяет фото…':'AI is checking the photo…','Распознать ещё раз':'Analyze again','Определить кота':'Detect cat',
+  'Например, Барсик':'For example, Whiskers','Сохраняю…':'Saving…','Добавить в коллекцию':'Add to collection',
+  'ТВОИ НАХОДКИ':'YOUR DISCOVERIES','Моя коллекция':'My collection','Каждая карточка — кот, которого ты встретил.':'Each card is a cat you have encountered.',
+  'Кот':'Cat','Удалить карточку':'Delete card','Сохранить имя':'Save name','Без имени':'Unnamed cat','Переименовать кота':'Rename cat',
+  'Настрой внешний вид и язык игры.':'Customize the game appearance and language.','Язык интерфейса':'Interface language',
+  'Английский перевод постепенно расширяется.':'English translation is enabled throughout the interface.',
+  'Тёмное оформление':'Dark theme','Тёмный фон и мягкие фиолетовые акценты.':'Dark background with soft purple accents.',
+  'Аватар профиля':'Profile avatar','Изменить аватар':'Change avatar','Котоисследователь':'Cat explorer','Как тебя называть?':'What should we call you?',
+  'Синхронизация…':'Syncing…','Сохранить профиль':'Save profile','Обычный':'Common','Уже используется':'Already in use','Открыто':'Unlocked',
+  'Используется':'In use','Выбрать':'Select','Надеть рамку':'Equip frame','Выбрать стиль':'Choose style','Надеть':'Equip',
+  'Сохранить выбранную косметику':'Save selected cosmetics','Ищу…':'Searching…','Найти':'Search','username не указан':'username not set',
+  'Добавить в друзья':'Add friend','Принять запрос':'Accept request','Отклонить запрос':'Decline request','Открыть профиль':'Open profile',
+  'Удалить из друзей':'Remove friend','Закрыть профиль':'Close profile','Аватар':'Avatar','Витрина котов':'Cat showcase',
+  'Пока нет котов на витрине.':'No cats featured yet.','Пока без друзей':'No friends yet','Найди знакомого по его Telegram username.':'Find someone by their Telegram username.',
+  'Найди игроков Cat Go по Telegram username.':'Find Cat Go players by Telegram username.',
+  'Настоящие друзья работают при открытии игры через Telegram-бота.':'Friend features work when the game is opened through the Telegram bot.',
+  'Показываются только игроки, которые хотя бы раз запускали Cat Go.':'Only players who have opened Cat Go at least once are shown.',
+  'Результаты поиска':'Search results','Запросы в друзья':'Friend requests','Мои друзья':'My friends',
+  'Фотографируй котов, давай им имена, оформляй профиль и добавляй друзей.':'Take photos of cats, name them, customize your profile, and add friends.',
+  'Добро пожаловать в Cat Go!':'Welcome to Cat Go!','Понятно!':'Got it!',
+  'Выбери изображение.':'Choose an image.','Фото слишком большое. Выбери файл до 12 МБ.':'Photo is too large. Choose a file under 12 MB.',
+  'Подготавливаю фотографию…':'Preparing photo…','Это фото уже есть в твоей коллекции. Сделай другое фото кота.':'This photo is already in your collection. Take a different cat photo.',
+  'Фото загружено. Автоматически определяю кота…':'Photo uploaded. Detecting the cat…','Не удалось открыть фото.':'Could not open photo.',
+  'Открой Cat Go через Telegram, чтобы распознать кота.':'Open Cat Go through Telegram to identify the cat.',
+  'ИИ изучает фотографию…':'AI is analyzing the photo…','Кот найден! Проверь описание и создай карточку.':'Cat found! Review the description and create a card.',
+  'ИИ не смог подтвердить, что на фото кот. Попробуй другое фото.':'AI could not confirm that the photo contains a cat. Try another photo.',
+  'Сначала нажми «Определить кота» и дождись проверки фото.':'Tap “Detect cat” and wait for the photo check first.',
+  'Напиши имя кота перед сохранением.':'Enter the cat’s name before saving.',
+  'Имя кота должно быть не длиннее 40 символов.':'Cat name must be 40 characters or fewer.',
+  'Эта карточка уже добавлена.':'This card has already been added.','Имя не может быть пустым.':'Name cannot be empty.',
+  'Имя кота обновлено.':'Cat name updated.','Карточка удалена.':'Card deleted.','Удалить карточку из коллекции?':'Delete this card from your collection?',
+  'Выбери изображение для аватарки.':'Choose an avatar image.','Файл аватарки должен быть меньше 12 МБ.':'Avatar file must be under 12 MB.',
+  'Аватар выбран. Нажми «Сохранить профиль».':'Avatar selected. Tap “Save profile”.','Не удалось обработать аватар.':'Could not process avatar.',
+  'Укажи имя профиля.':'Enter a profile name.','Имя профиля должно быть не длиннее 32 символов.':'Profile name must be 32 characters or fewer.',
+  'Профиль сохранён!':'Profile saved!','Введи Telegram username (минимум 2 символа).':'Enter a Telegram username (at least 2 characters).',
+  'Поиск настоящих друзей доступен внутри Telegram.':'Friend search is available inside Telegram.',
+  'Игрок не найден. Он должен хотя бы раз открыть Cat Go.':'Player not found. They must open Cat Go at least once.',
+  'Вы уже друзья!':'You are already friends!','Запрос в друзья отправлен.':'Friend request sent.',
+  'Запрос принят. Вы теперь друзья!':'Request accepted. You are now friends!','Запрос отклонён.':'Request declined.',
+  'В витрине может быть не больше 6 котов.':'You can feature up to 6 cats.','Профили друзей доступны при запуске игры через Telegram.':'Friend profiles are available when the game is opened through Telegram.',
+  'Фон профиля':'Profile backgrounds','Рамки аватара':'Avatar frames','Оформление карточек':'Card styles','Аксессуары аватара':'Avatar accessories',
+  'Фоны профиля':'Profile backgrounds','НАГРАДЫ ЗА ПРОГРЕСС':'PROGRESS REWARDS',
+  'Повышай уровень, чтобы открывать новые оформления профиля. XP не тратится — разблокировки остаются навсегда.':'Level up to unlock profile cosmetics. XP is not spent; unlocked items are yours permanently.',
+  'Уровень':'Level','Закрыто':'Locked','Фотографируй котов':'Take photos of cats',
+  'Пока нет находок':'No discoveries yet','Добавь первую находку, чтобы она появилась у всех игроков.':'Add the first discovery to make it visible to all players.',
+  'Выбери точку на карте':'Choose a point on the map','Точка выбрана':'Point selected','Нажми на карту, чтобы отметить место встречи с котом.':'Tap the map to mark where you encountered a cat.',
+  'Скопировать координаты':'Copy coordinates','Координаты скопированы.':'Coordinates copied.','Выбрать фото кота из галереи':'Choose a cat photo from gallery',
+  'Имя кота (например, Рыжик)':'Cat name (e.g. Ginger)','Описание (необязательно)':'Description (optional)',
+  'Находка опубликована на общей карте!':'Discovery published to the shared map!','Публикуем…':'Publishing…',
+  'Сначала выбери точку на карте':'Choose a point on the map first','Подключаем сервер…':'Connecting to server…','Опубликовать находку':'Publish discovery',
+  'Выбранная точка':'Selected point','Моё место':'My location','Загружаем метки…':'Loading markers…',
+  'База меток подключается':'Connecting to marker database','Интерактивная карта находок котов':'Interactive cat discovery map',
+  'Удалить фото':'Delete photo','Удаляем…':'Deleting…','Добавь котов в коллекцию.':'Add cats to your collection.',
+  'Скачать резервную копию':'Download backup','Экспорт данных коллекции':'Export collection data',
+  'Пока нет котов на витрине.':'No cats featured yet.','Витрина котов':'Cat showcase',
+  'Лаванда':'Lavender','Закат':'Sunset','Мята':'Mint','Небо':'Sky','Ночь':'Night','Персик':'Peach',
+  'Без рамки':'No frame','Золотая':'Gold','Розовая':'Rose','Неоновая':'Neon','Космическая':'Cosmic',
+  'Классика':'Classic','Розовый блеск':'Rose glow','Мятный':'Mint','Ночная охота':'Night hunt','Золотая коллекция':'Golden collection',
+  'Без аксессуара':'No accessory','Бантик':'Bow','Очки':'Glasses','Корона':'Crown','Ореол':'Halo','Праздничная шапка':'Party hat',
+  'Пушистый исследователь':'Fluffy explorer','Рыжий охотник':'Ginger hunter','Сонный философ':'Sleepy philosopher',
+  'Усатый путешественник':'Whiskered traveller','Хозяин дивана':'Sofa king','Тихий наблюдатель':'Quiet observer',
+  'Солнечный комочек':'Little ray of sunshine','Ночной прыгун':'Night jumper',
+  'Открой игру через Telegram-бота':'Open the game through the Telegram bot','Не настроено подключение к Supabase':'Supabase connection is not configured',
+  'Сервер вернул некорректный ответ':'The server returned an invalid response','Ошибка сервера':'Server error',
+  'Геолокация не поддерживается этим устройством.':'Geolocation is not supported on this device.',
+  'Не удалось получить геолокацию. Можно выбрать точку нажатием на карту.':'Could not get your location. Tap the map to choose a point.',
+  'Публикуй только фото котов, которые ты вправе размещать. Автоматическая проверка, что на фото именно кот, пока не подключена.':'Only publish cat photos you have permission to share. Automatic cat verification is not enabled for map posts yet.',
+  'Важно: сейчас фото сохраняется как карточка кота, а автоматическое распознавание котов и удаление фона ещё не подключены.':'Note: photos are currently saved as cat cards. Automatic cat recognition and background removal are not enabled yet.'
+};
+
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 function loadGoogleMaps(apiKey) {
@@ -522,6 +600,65 @@ function App() {
   const [darkTheme, setDarkTheme] = useState(() => localStorage.getItem('catgo_theme') !== 'light');
   const isEnglish = language === 'en';
   const t = (ru, en) => isEnglish ? en : ru;
+  useEffect(() => {
+    const originalText = new WeakMap();
+    const originalAttributes = new WeakMap();
+    const translateValue = (value) => {
+      const trimmed = value.trim();
+      if (!trimmed) return value;
+      let translated = UI_TRANSLATIONS[trimmed];
+      if (!translated && /^\d+ общих находок$/.test(trimmed)) translated = trimmed.replace('общих находок', 'shared discoveries');
+      if (!translated && /^\d+ карточек уже собрано$/.test(trimmed)) translated = trimmed.replace('карточек уже собрано', 'cards collected');
+      if (!translated && /^Уровень \d+$/.test(trimmed)) translated = trimmed.replace('Уровень', 'Level');
+      if (!translated && /^Откроется на уровне \d+$/.test(trimmed)) translated = trimmed.replace('Откроется на уровне', 'Unlocks at level');
+      if (!translated && /^Откроется на уровне ∞$/.test(trimmed)) translated = 'Available in owner preview';
+      if (!translated && /^Фон «.*» выбран\. Не забудь сохранить профиль\.$/.test(trimmed)) translated = 'Background selected. Remember to save your profile.';
+      if (!translated && /^Кот «.*» добавлен! \+\d+ XP$/.test(trimmed)) translated = trimmed.replace('Кот «', 'Cat “').replace('» добавлен!', '” added!');
+      if (!translated && /^Найдено игроков: \d+$/.test(trimmed)) translated = trimmed.replace('Найдено игроков:', 'Players found:');
+      if (!translated && /^\d+ котов в коллекции$/.test(trimmed)) translated = trimmed.replace('котов в коллекции', 'cats in collection');
+      return translated || trimmed;
+    };
+    const translateTree = (root) => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (!originalText.has(node)) originalText.set(node, node.nodeValue);
+        const original = originalText.get(node);
+        node.nodeValue = isEnglish ? translateValue(original) : original;
+      }
+      const elements = root.nodeType === Node.ELEMENT_NODE ? [root, ...root.querySelectorAll('*')] : [];
+      elements.forEach((element) => {
+        ['placeholder', 'aria-label', 'title'].forEach((attribute) => {
+          if (!element.hasAttribute(attribute)) return;
+          let saved = originalAttributes.get(element);
+          if (!saved) { saved = {}; originalAttributes.set(element, saved); }
+          if (!(attribute in saved)) saved[attribute] = element.getAttribute(attribute);
+          const original = saved[attribute];
+          element.setAttribute(attribute, isEnglish ? translateValue(original) : original);
+        });
+      });
+    };
+    translateTree(document.querySelector('.app-shell') || document.body);
+    const observer = new MutationObserver((records) => {
+      records.forEach((record) => {
+        if (record.type === 'characterData') {
+          const node = record.target;
+          if (!originalText.has(node)) originalText.set(node, node.nodeValue);
+          const original = originalText.get(node);
+          const next = isEnglish ? translateValue(original) : original;
+          if (node.nodeValue !== next) node.nodeValue = next;
+        } else record.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) translateTree(node);
+          else if (node.nodeType === Node.TEXT_NODE) {
+            if (!originalText.has(node)) originalText.set(node, node.nodeValue);
+            node.nodeValue = isEnglish ? translateValue(originalText.get(node)) : originalText.get(node);
+          }
+        });
+      });
+    });
+    observer.observe(document.querySelector('.app-shell') || document.body, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [isEnglish]);
   useEffect(() => { localStorage.setItem('catgo_language', language); }, [language]);
   useEffect(() => { localStorage.setItem('catgo_theme', darkTheme ? 'dark' : 'light'); }, [darkTheme]);
   const ownerPreview = String(TG?.initDataUnsafe?.user?.username || '').toLowerCase() === 'elchervei';
