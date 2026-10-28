@@ -215,6 +215,7 @@ function SharedCatMap({ onMessage }) {
   const [sightings, setSightings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [backendReady, setBackendReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     if (!mapElementRef.current || mapRef.current) return undefined;
@@ -259,6 +260,7 @@ function SharedCatMap({ onMessage }) {
       });
       map.addControl(new maplibregl.NavigationControl(), 'top-right');
       mapRef.current = map;
+      setMapReady(true);
       map.on('click', (event) => choosePoint({
         lat: Number(event.lngLat.lat.toFixed(6)), lng: Number(event.lngLat.lng.toFixed(6)),
       }));
@@ -276,6 +278,7 @@ function SharedCatMap({ onMessage }) {
           clickableIcons: false,
         });
         mapRef.current = map;
+        setMapReady(true);
         clickListener = map.addListener('click', (event) => {
           if (!event.latLng) return;
           choosePoint({
@@ -298,6 +301,7 @@ function SharedCatMap({ onMessage }) {
       if (mapRef.current?.remove) mapRef.current.remove();
       mapRef.current = null;
       selectedMarkerRef.current = null;
+      setMapReady(false);
     };
   }, []);
 
@@ -328,7 +332,7 @@ function SharedCatMap({ onMessage }) {
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !backendReady) return;
+    if (!map || !backendReady || !mapReady) return;
     const markers = [];
     const isGoogle = Boolean(window.google?.maps && typeof map.addListener === 'function');
     sightings.forEach((sighting) => {
@@ -357,7 +361,7 @@ function SharedCatMap({ onMessage }) {
       }
     });
     return () => { markers.forEach((marker) => marker.remove()); };
-  }, [sightings, backendReady]);
+  }, [sightings, backendReady, mapReady]);
 
   function locateMe() {
     if (!navigator.geolocation) {
