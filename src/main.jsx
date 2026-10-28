@@ -47,25 +47,10 @@ const XP_KEY = 'catgo_v1_xp';
 const MISSION_KEY = 'catgo_v1_missions';
 const PROFILE_KEY = 'catgo_v1_profile';
 
-const rarities = [
-  { name: 'Обычный', color: '#8a9a86', bonus: 10 },
-  { name: 'Необычный', color: '#52a88a', bonus: 20 },
-  { name: 'Редкий', color: '#6b83df', bonus: 35 },
-  { name: 'Эпический', color: '#a16bce', bonus: 60 },
-  { name: 'Легендарный', color: '#e3a52f', bonus: 100 },
-];
-
 const names = [
   'Пушистый исследователь', 'Рыжий охотник', 'Сонный философ',
   'Усатый путешественник', 'Хозяин дивана', 'Тихий наблюдатель',
   'Солнечный комочек', 'Ночной прыгун',
-];
-
-const traits = [
-  { label: 'Любопытство', icon: CircleHelp, min: 35, max: 99 },
-  { label: 'Ловкость', icon: Footprints, min: 30, max: 99 },
-  { label: 'Дружелюбие', icon: Heart, min: 35, max: 99 },
-  { label: 'Смелость', icon: Shield, min: 25, max: 99 },
 ];
 
 const backgrounds = {
@@ -88,11 +73,6 @@ const backgroundLabels = {
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function pickRarity() {
-  const n = Math.random();
-  return n > 0.985 ? 4 : n > 0.92 ? 3 : n > 0.72 ? 2 : n > 0.38 ? 1 : 0;
 }
 
 function readJSON(key, fallback) {
@@ -367,21 +347,12 @@ function App() {
   function prepareCard() {
     if (!photo) return;
 
-    const rarityIndex = pickRarity();
-    const values = traits.map((trait) => ({
-      label: trait.label,
-      value: rand(trait.min, trait.max),
-    }));
-
     setDraft({
       id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
       name: '',
-      rarity: rarities[rarityIndex],
-      rarityIndex,
-      traits: values,
       createdAt: Date.now(),
       photo,
-      xp: rarities[rarityIndex].bonus,
+      xp: 10,
       originalName: fileName,
     });
   }
@@ -854,9 +825,6 @@ function App() {
               ) : (
                 <div className="draft-card">
                   <div className="draft-head">
-                    <span className="rarity-pill" style={{ '--rarity': draft.rarity.color }}>
-                      {draft.rarity.name}
-                    </span>
                     <span className="xp-pill"><Zap size={14} /> +{draft.xp} XP</span>
                   </div>
                   <label className="field-label">Как зовут этого кота?</label>
@@ -867,16 +835,7 @@ function App() {
                     value={draft.name}
                     onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
                   />
-                  <p className="muted">Имя можно будет изменить позже.</p>
-                  <p className="muted">Характеристики для игры · генерируются случайно</p>
-                  <div className="traits-grid">
-                    {draft.traits.map((trait) => (
-                      <div className="trait" key={trait.label}>
-                        <div className="trait-head"><span>{trait.label}</span><b>{trait.value}</b></div>
-                        <div className="trait-bar"><i style={{ width: `${trait.value}%` }} /></div>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="muted">Имя можно будет изменить позже. За каждого кота начисляется 10 XP.</p>
                   <div className="button-row">
                     <button className="secondary-button" onClick={() => setDraft(null)} disabled={savingCard}>
                       Назад
@@ -934,9 +893,6 @@ function App() {
                   <article className="cat-card" key={card.id}>
                     <div className="cat-photo">
                       <img src={card.photo} alt={card.name || 'Кот'} />
-                      <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>
-                        {card.rarity?.name || 'Обычный'}
-                      </span>
                       <button className="delete-card" aria-label="Удалить карточку" onClick={() => removeCard(card.id)}>
                         <Trash2 size={15} />
                       </button>
@@ -959,11 +915,6 @@ function App() {
                       <div className="cat-card-meta">
                         <span><Zap size={14} /> +{card.xp} XP</span>
                         <span>{new Date(card.createdAt || Date.now()).toLocaleDateString('ru-RU')}</span>
-                      </div>
-                      <div className="mini-traits">
-                        {(card.traits || []).map((trait) => (
-                          <span key={trait.label}>{trait.label}: <b>{trait.value}</b></span>
-                        ))}
                       </div>
                     </div>
                   </article>
@@ -1070,7 +1021,7 @@ function App() {
 
           <div className="profile-stat-row">
             <div><strong>{cards.length}</strong><span>Котов собрано</span></div>
-            <div><strong>{cards.filter((card) => Number(card.rarityIndex) >= 3).length}</strong><span>Особых находок</span></div>
+            <div><strong>{xp}</strong><span>Всего XP</span></div>
             <div><strong>{level}</strong><span>Уровень</span></div>
           </div>
 
@@ -1273,17 +1224,9 @@ function App() {
                         <article className="cat-card" key={card.id}>
                           <div className="cat-card-image-wrap">
                             <img src={card.photo} alt={card.name || 'Кот'} />
-                            <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>
-                              {card.rarity?.name || 'Обычный'}
-                            </span>
                           </div>
                           <div className="cat-card-body">
                             <h3>{card.name || 'Без имени'}</h3>
-                            <div className="mini-traits">
-                              {(card.traits || []).map((trait) => (
-                                <span key={trait.label}>{trait.label}: <b>{trait.value}</b></span>
-                              ))}
-                            </div>
                           </div>
                         </article>
                       ))}
@@ -1325,7 +1268,7 @@ function App() {
             <div className="modal-icon">🐾</div>
             <h2>Добро пожаловать в Cat Go!</h2>
             <p>Фотографируй котов, давай им имена, оформляй профиль и добавляй друзей.</p>
-            <p><b>Важно:</b> редкость и характеристики пока генерируются игровыми правилами. Автоматическое распознавание котов и удаление фона ещё не подключены.</p>
+            <p><b>Важно:</b> сейчас фото сохраняется как карточка кота, а автоматическое распознавание котов и удаление фона ещё не подключены.</p>
             <button className="primary-button full" onClick={() => setShowInfo(false)}>Понятно!</button>
           </div>
         </div>
