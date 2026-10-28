@@ -4,7 +4,7 @@ import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, UserRound, X, Zap, Heart,
   Shield, Trash2, Download, Info, Users, UserPlus, Search,
-  Save, Palette, Pencil, Copy, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed
+  Save, Palette, Pencil, Copy, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed, Settings, Languages, Moon, Sun
 } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -1103,7 +1103,7 @@ function App() {
         <div className="brand-copy">
           <strong>Cat Go</strong><span>{t('кошачья экспедиция', 'CAT ADVENTURE')}</span>
         </div>
-        <button className="icon-button" aria-label="О проекте" onClick={() => setShowInfo(true)}>
+        <button className="icon-button" aria-label={t('О проекте', 'About Cat Go')} onClick={() => setShowInfo(true)}>
           <CircleHelp size={21} />
         </button>
       </header>
@@ -1120,9 +1120,9 @@ function App() {
         <main className="page map-page">
           <section className="section-head">
             <div>
-              <span className="eyebrow">КОШАЧЬЯ ЭКСПЕДИЦИЯ</span>
-              <h1><MapPin size={26} /> Карта находок</h1>
-              <p className="muted">Общая карта встреч с котами. Геолокация включается только по твоему нажатию.</p>
+              <span className="eyebrow">{t('КОШАЧЬЯ ЭКСПЕДИЦИЯ', 'CAT ADVENTURE')}</span>
+              <h1><MapPin size={26} /> {t('Карта находок', 'Cat Map')}</h1>
+              <p className="muted">{t('Общая карта встреч с котами. Геолокация включается только по твоему нажатию.', 'A shared map of cat sightings. Location is used only when you choose to share it.')}</p>
             </div>
           </section>
           <SharedCatMap onMessage={notify} />
@@ -1317,9 +1317,9 @@ function App() {
         <main className="page">
           <section className="section-head collection-head">
             <div>
-              <span className="eyebrow">ТВОИ НАХОДКИ</span>
-              <h1>Моя коллекция</h1>
-              <p className="muted">Каждая карточка — кот, которого ты встретил.</p>
+              <span className="eyebrow">{t('ТВОИ НАХОДКИ', 'YOUR FINDS')}</span>
+              <h1>{t('Моя коллекция', 'My Collection')}</h1>
+              <p className="muted">{t('Каждая карточка — кот, которого ты встретил.', 'Every card is a cat you have met.')}</p>
             </div>
             <button className="round-add" onClick={startPhoto}><Camera size={20} /></button>
           </section>
@@ -1822,7 +1822,7 @@ function App() {
             </button>
             <div className="modal-icon">🐾</div>
             <h2>Добро пожаловать в Cat Go!</h2>
-            <p>Фотографируй котов, давай им имена, оформляй профиль и добавляй друзей.</p>
+            <p>{t('Фотографируй котов, давай им имена, оформляй профиль и добавляй друзей.', 'Take photos of cats, name them, customize your profile, and add friends.')}</p>
             <p><b>Важно:</b> сейчас фото сохраняется как карточка кота, а автоматическое распознавание котов и удаление фона ещё не подключены.</p>
             <button className="primary-button full" onClick={() => setShowInfo(false)}>Понятно!</button>
           </div>
