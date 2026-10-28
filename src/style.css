@@ -910,3 +910,65 @@
 
 body:has(.app-shell[data-theme="dark"]) { background:#17151f; }
 body:has(.app-shell[data-theme="light"]) { background:#fffaf5; }
+
+
+/* Eye-button previews for customization items */
+.cosmetic-eye {
+  position: absolute;
+  z-index: 4;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 50%;
+  color: #51446f;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 3px 12px rgba(20,14,35,.18);
+  cursor: pointer;
+  transition: transform .16s ease, background .16s ease;
+}
+.cosmetic-eye:hover { transform: scale(1.08); background: #fff; }
+.cosmetic-eye:active { transform: scale(.96); }
+.cosmetic-preview-backdrop { z-index: 1000; }
+.cosmetic-preview-modal { width: min(100%, 390px); text-align: center; }
+.cosmetic-preview-modal h2 { margin: 8px 0 18px; }
+.cosmetic-large-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 230px;
+  padding: 24px 18px;
+  border-radius: 20px;
+  color: #282231;
+  overflow: hidden;
+}
+.cosmetic-large-preview > strong { font-size: 17px; }
+.cosmetic-large-preview > small { opacity: .7; }
+.cosmetic-large-avatar {
+  display: grid;
+  place-items: center;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 5px;
+  border: 5px solid rgba(255,255,255,.92);
+  border-radius: 50%;
+  background: rgba(255,255,255,.7);
+  font-size: 58px;
+  box-shadow: 0 5px 22px rgba(0,0,0,.14);
+}
+.cosmetic-large-frame { display: grid; place-items: center; }
+.cosmetic-large-frame.frame-gold .cosmetic-large-avatar { border-color: #e9b83f; box-shadow: 0 0 0 4px #fff2bd, 0 0 22px #d99b3e77; }
+.cosmetic-large-frame.frame-rose .cosmetic-large-avatar { border-color: #f28caf; box-shadow: 0 0 0 4px #ffe2ed, 0 0 20px #f28caf66; }
+.cosmetic-large-frame.frame-neon .cosmetic-large-avatar { border-color: #8c65ef; box-shadow: 0 0 0 4px #c5a8ff, 0 0 24px #9272ff99; }
+.cosmetic-large-frame.frame-cosmic .cosmetic-large-avatar { border-color: #4c3e83; box-shadow: 0 0 0 4px #d8c4ff, 0 0 24px #6154c599; }
+.accessory-large-avatar { position: relative; }
+.accessory-large-avatar span { position: absolute; top: -14px; right: -9px; font-size: 32px; filter: drop-shadow(0 3px 5px #00000025); }
+.cosmetic-large-card { width: min(100%, 280px); margin: 0 auto; }
+.cosmetic-card-cat { display: grid; place-items: center; width: 100%; height: 100%; min-height: 170px; font-size: 90px; }
+.cosmetic-preview-modal .muted { margin: 14px 0; }
