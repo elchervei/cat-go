@@ -524,3 +524,27 @@
 .shop-preview.card-style-night { background: linear-gradient(135deg,#34304f,#7770a1); }
 .shop-preview.card-style-gold { background: linear-gradient(135deg,#ffe7a1,#fff9e5); }
 .accessory-preview .shop-preview-cat { font-size: 66px; }
+
+
+.sync-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  color: #92776c;
+  background: #fff1e8;
+  font-size: 11px;
+  font-weight: 700;
+}
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f08b72;
+  box-shadow: 0 0 0 4px #f08b721f;
+  animation: sync-pulse 1.2s ease-in-out infinite;
+}
+@keyframes sync-pulse {
+  50% { opacity: .45; transform: scale(.85); }
+}
