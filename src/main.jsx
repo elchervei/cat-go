@@ -529,6 +529,9 @@ function App() {
   const [missions, setMissions] = useState(() =>
     readJSON(playerStorageKey(MISSION_KEY), { photo: 0, days: 0 })
   );
+  const [smartMissions, setSmartMissions] = useState([]);
+  const [loadingSmartMissions, setLoadingSmartMissions] = useState(false);
+  const [smartMissionMessage, setSmartMissionMessage] = useState("");
   const [profile, setProfile] = useState(() =>
     readJSON(playerStorageKey(PROFILE_KEY), emptyProfile)
   );
@@ -753,6 +756,36 @@ function App() {
     }
   }
 
+  async function generateSmartMissions() {
+    if (loadingSmartMissions) return;
+    setLoadingSmartMissions(true);
+    setSmartMissionMessage('');
+    try {
+      const collectionSummary = cards.slice(0, 60).map((card) => ({
+        coat_color: card.catTraits?.coat_color || 'неизвестно',
+        pattern: card.catTraits?.pattern || 'неизвестно',
+        fur_length: card.catTraits?.fur_length || 'неизвестно',
+        eye_color: card.catTraits?.eye_color || 'неизвестно',
+        visible_traits: Array.isArray(card.catTraits?.visible_traits) ? card.catTraits.visible_traits.slice(0, 4) : [],
+      }));
+      const result = await catgoRequest('generate_smart_missions', { cards: collectionSummary });
+      if (!Array.isArray(result.missions) || !result.missions.length) throw new Error('ИИ пока не смог подобрать задания.');
+      setSmartMissions(result.missions);
+      setSmartMissionMessage('Готово — задания подобраны по твоей коллекции.');
+    } catch (error) {
+      const known = new Set(cards.map((card) => String(card.catTraits?.coat_color || '').toLowerCase()));
+      const target = ['чёрный', 'белый', 'рыжий', 'серый', 'трёхцветный'].find((color) => ![...known].some((item) => item.includes(color))) || 'необычный';
+      setSmartMissions([
+        { id: 'fallback-color', title: 'Новый оттенок', description: 'Найди кота: ' + target + '.', target_color: target, target_pattern: '', target_trait: '', goal: 1, reward_xp: 20 },
+        { id: 'fallback-pattern', title: 'Изучатель узоров', description: 'Добавь кота с заметным рисунком шерсти.', target_color: '', target_pattern: 'рисунок шерсти', target_trait: '', goal: 1, reward_xp: 25 },
+        { id: 'fallback-observer', title: 'Внимательный наблюдатель', description: 'Добавь кота и проверь его видимые особенности.', target_color: '', target_pattern: '', target_trait: 'видимые особенности', goal: 1, reward_xp: 15 },
+      ]);
+      setSmartMissionMessage('ИИ временно недоступен — показал запасные задания. ' + error.message);
+    } finally {
+      setLoadingSmartMissions(false);
+    }
+  }
+
   function prepareCard() {
     if (!photo) return;
     if (!catAnalysis?.is_cat || catAnalysis.photo !== photo) {
@@ -768,6 +801,7 @@ function App() {
       photoHash: pendingPhotoHash,
       catTraits: {
         coat_color: catAnalysis.coat_color,
+        eye_color: catAnalysis.eye_color,
         pattern: catAnalysis.pattern,
         fur_length: catAnalysis.fur_length,
         visible_traits: catAnalysis.visible_traits,
@@ -1421,6 +1455,23 @@ function App() {
             </div>
             <span className="mission-reward"><Zap size={14} /> +30 XP</span>
           </div>
+          <section className="section-head smart-mission-head">
+            <div><span className="eyebrow">ПЕРСОНАЛЬНЫЕ ИСПЫТАНИЯ</span><h2>Задания от ИИ</h2><p className="muted">ИИ учитывает окрасы и признаки из твоей коллекции.</p></div>
+            <button className="secondary-button" onClick={generateSmartMissions} disabled={loadingSmartMissions || !serverReady}>
+              <Sparkles size={16} /> {loadingSmartMissions ? 'Подбираю…' : smartMissions.length ? 'Обновить' : 'Подобрать'}
+            </button>
+          </section>
+          {smartMissionMessage && <div className="note-card"><Info size={18} /><p>{smartMissionMessage}</p></div>}
+          {smartMissions.map((mission) => (
+            <div className="mission-card smart-mission-card" key={mission.id}>
+              <div className="mission-icon lilac"><Sparkles size={22} /></div>
+              <div className="mission-content">
+                <strong>{mission.title}</strong><p>{mission.description}</p>
+                <small className="muted">{[mission.target_color, mission.target_pattern, mission.target_trait].filter(Boolean).join(' · ')}</small>
+              </div>
+              <span className="mission-reward"><Zap size={14} /> +{mission.reward_xp} XP</span>
+            </div>
+          ))}
           <div className="note-card"><Heart size={18} /><p>Держи дистанцию, не используй вспышку и не фотографируй кота, если он выглядит напуганным.</p></div>
         </main>
       )}
