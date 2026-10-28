@@ -100,6 +100,11 @@ const avatarAccessories = [
   { key: 'party', label: 'Праздничная шапка', emoji: '🥳', level: 12 },
 ];
 
+function playerStorageKey(key) {
+  const telegramId = TG?.initDataUnsafe?.user?.id;
+  return telegramId ? `${key}_tg_${telegramId}` : key;
+}
+
 function readJSON(key, fallback) {
   try {
     const value = localStorage.getItem(key);
@@ -171,17 +176,13 @@ function App() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [tab, setTab] = useState('home');
 
-  const [cards, setCards] = useState(() =>
-    TG?.initData ? [] : readJSON(STORE_KEY, [])
-  );
-  const [xp, setXp] = useState(() =>
-    TG?.initData ? 0 : Number(localStorage.getItem(XP_KEY) || 0)
-  );
+  const [cards, setCards] = useState(() => readJSON(playerStorageKey(STORE_KEY), []));
+  const [xp, setXp] = useState(() => Number(localStorage.getItem(playerStorageKey(XP_KEY)) || 0));
   const [missions, setMissions] = useState(() =>
-    TG?.initData ? { photo: 0, days: 0 } : readJSON(MISSION_KEY, { photo: 0, days: 0 })
+    readJSON(playerStorageKey(MISSION_KEY), { photo: 0, days: 0 })
   );
   const [profile, setProfile] = useState(() =>
-    TG?.initData ? emptyProfile : readJSON(PROFILE_KEY, emptyProfile)
+    readJSON(playerStorageKey(PROFILE_KEY), emptyProfile)
   );
 
   const [photo, setPhoto] = useState('');
@@ -198,7 +199,7 @@ function App() {
   const [playerResults, setPlayerResults] = useState([]);
   const [friends, setFriends] = useState([]);
   const [showcaseIds, setShowcaseIds] = useState(() =>
-    readJSON(PROFILE_KEY, emptyProfile).showcase_card_ids || []
+    readJSON(playerStorageKey(PROFILE_KEY), emptyProfile).showcase_card_ids || []
   );
   const [viewingFriend, setViewingFriend] = useState(null);
   const [loadingFriendProfile, setLoadingFriendProfile] = useState(false);
@@ -284,25 +285,27 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!TG?.initData) localStorage.setItem(STORE_KEY, JSON.stringify(cards));
-  }, [cards]);
+    if (TG?.initData && !serverReady) return;
+    localStorage.setItem(playerStorageKey(STORE_KEY), JSON.stringify(cards));
+  }, [cards, serverReady]);
 
   useEffect(() => {
-    if (!TG?.initData) localStorage.setItem(XP_KEY, String(xp));
-  }, [xp]);
+    if (TG?.initData && !serverReady) return;
+    localStorage.setItem(playerStorageKey(XP_KEY), String(xp));
+  }, [xp, serverReady]);
 
   useEffect(() => {
-    if (!TG?.initData) localStorage.setItem(MISSION_KEY, JSON.stringify(missions));
-  }, [missions]);
+    if (TG?.initData && !serverReady) return;
+    localStorage.setItem(playerStorageKey(MISSION_KEY), JSON.stringify(missions));
+  }, [missions, serverReady]);
 
   useEffect(() => {
-    if (!TG?.initData) {
-      localStorage.setItem(
-        PROFILE_KEY,
-        JSON.stringify({ ...profile, showcase_card_ids: showcaseIds })
-      );
-    }
-  }, [profile, showcaseIds]);
+    if (TG?.initData && !serverReady) return;
+    localStorage.setItem(
+      playerStorageKey(PROFILE_KEY),
+      JSON.stringify({ ...profile, showcase_card_ids: showcaseIds })
+    );
+  }, [profile, showcaseIds, serverReady]);
 
   const level = Math.floor(xp / 100) + 1;
   const nextXP = xp % 100;
@@ -693,20 +696,6 @@ function App() {
   const profileBackgroundStyle =
     backgrounds[profileBackground] || backgrounds.lavender;
 
-  if (!serverReady) {
-    return (
-      <div className="app-shell">
-        <main className="page">
-          <div className="empty-state">
-            <div className="empty-paw">🐾</div>
-            <h2>Загружаем Cat Go…</h2>
-            <p>Подключаем твою коллекцию.</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -718,6 +707,8 @@ function App() {
           <CircleHelp size={21} />
         </button>
       </header>
+
+      {!serverReady && <div className="sync-banner"><span className="sync-dot" /> Синхронизируем профиль и коллекцию…</div>}
 
       {message && (
         <button className="toast" onClick={() => setMessage('')}>
@@ -1049,8 +1040,8 @@ function App() {
             <button className="secondary-button full" onClick={() => setTab('shop')}>
               <Store size={17} /> Открыть магазин фонов
             </button>
-            <button className="primary-button full" onClick={saveProfile} disabled={savingProfile}>
-              <Save size={18} /> {savingProfile ? 'Сохраняю…' : 'Сохранить профиль'}
+            <button className="primary-button full" onClick={saveProfile} disabled={savingProfile || !serverReady}>
+              <Save size={18} /> {savingProfile ? 'Сохраняю…' : !serverReady ? 'Синхронизация…' : 'Сохранить профиль'}
             </button>
           </section>
 
