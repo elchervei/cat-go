@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
                 .join("").trim();
             let catCheck: any;
             try {
-                const cleaned = String(catCheckText || "").replace(/^\\s*\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, "").trim();
+                const cleaned = String(catCheckText || "").replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
                 catCheck = JSON.parse(cleaned.slice(cleaned.indexOf("{"), cleaned.lastIndexOf("}") + 1));
             } catch {
                 return json({ error: "Не удалось подтвердить, что на фото кот. Попробуй другое фото." }, 422);
