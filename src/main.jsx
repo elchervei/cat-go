@@ -1310,7 +1310,6 @@ function App() {
         {[
           ['home', Compass, 'Главная'],
           ['collection', Cat, 'Коллекция'],
-          ['shop', Store, 'Магазин'],
           ['friends', Users, 'Друзья'],
           ['missions', Trophy, 'Задания'],
           ['profile', UserRound, 'Профиль'],
