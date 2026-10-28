@@ -727,7 +727,9 @@ function App() {
   }
 
   async function analyzeCatPhoto(photoOverride) {
-    const photoToAnalyze = photoOverride || photo;
+    // React passes a click event when this function is used directly as onClick.
+    // Only accept an actual image data URL; never serialize a DOM event into the request.
+    const photoToAnalyze = typeof photoOverride === 'string' ? photoOverride : photo;
     if (!photoToAnalyze || analyzingCat) return;
     if (!TG?.initData) {
       setMessage('Открой Cat Go через Telegram, чтобы распознать кота.');
