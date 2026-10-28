@@ -224,12 +224,15 @@ Deno.serve(async (req) => {
                 const details = await geminiResponse.text();
                 console.error("Gemini analysis failed:", geminiResponse.status, details.slice(0, 1000));
                 if (geminiResponse.status === 400 || geminiResponse.status === 403 || geminiResponse.status === 401) {
-                    return json({ error: "Gemini не принял запрос. Проверь ключ и доступ к модели в Google AI Studio." }, 502);
+                    return json({ error: "Gemini не принял запрос. Проверь ключ и доступ к модели в Google AI Studio (код " + geminiResponse.status + ")." }, 502);
+                }
+                if (geminiResponse.status === 404) {
+                    return json({ error: "Google не нашёл модель распознавания (404). Нужно проверить название модели в функции Supabase." }, 502);
                 }
                 if (geminiResponse.status === 429) {
-                    return json({ error: "Лимит бесплатных запросов распознавания временно исчерпан. Попробуй позже." }, 429);
+                    return json({ error: "Лимит запросов распознавания исчерпан (429). Попробуй позже или проверь квоту Gemini." }, 429);
                 }
-                return json({ error: "Сервис распознавания временно недоступен. Попробуй ещё раз." }, 502);
+                return json({ error: "Google Gemini временно не отвечает (код " + geminiResponse.status + "). Попробуй ещё раз; если повторится, проверь логи Edge Function в Supabase." }, 502);
             }
             const geminiData = await geminiResponse.json();
             const rawText = geminiData?.candidates?.[0]?.content?.parts
