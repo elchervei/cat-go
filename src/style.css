@@ -734,8 +734,10 @@
 .map-selection-card strong { font-size:12px; }
 .map-selection-card p { margin:4px 0 0; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
 .owner-preview-note { margin:10px 0; padding:10px 12px; border:1px solid #e8d6ff; border-radius:12px; background:#f8f0ff; color:#7651a3; font-size:11px; line-height:1.5; }
-.leaflet-container { font-family:inherit; }
-.leaflet-popup-content { margin:10px 12px; line-height:1.4; }
+.maplibregl-map { font-family:inherit; }
+.maplibregl-popup-content { margin:10px 12px; line-height:1.4; border-radius:12px; }
+.maplibregl-ctrl-attrib { font-size:10px; }
+.maplibregl-marker { cursor:pointer; }
 @media(max-width:360px) { .real-cat-map { min-height:285px; } .map-status { font-size:10px; } .map-locate-button { padding:8px; } }
 
 

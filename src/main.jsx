@@ -6,8 +6,8 @@ import {
   Shield, Trash2, Download, Info, Users, UserPlus, Search,
   Save, Palette, Pencil, Copy, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed
 } from 'lucide-react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 
 const TG = window.Telegram?.WebApp;
@@ -198,27 +198,45 @@ function SharedCatMap({ onMessage }) {
 
   useEffect(() => {
     if (!mapElementRef.current || mapRef.current) return undefined;
-    const map = L.map(mapElementRef.current, { zoomControl: true }).setView([51.1657, 10.4515], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
+    const map = new maplibregl.Map({
+      container: mapElementRef.current,
+      center: [10.4515, 51.1657],
+      zoom: 6,
+      style: {
+        version: 8,
+        sources: {
+          esriWorldStreetMap: {
+            type: 'raster',
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256,
+            attribution: 'Tiles &copy; Esri — Sources: Esri, TomTom, Garmin, FAO, NOAA, USGS, and the GIS User Community',
+          },
+        },
+        layers: [{ id: 'esri-world-street-map', type: 'raster', source: 'esriWorldStreetMap' }],
+      },
+      attributionControl: true,
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
     mapRef.current = map;
 
     map.on('click', (event) => {
-      const point = { lat: Number(event.latlng.lat.toFixed(6)), lng: Number(event.latlng.lng.toFixed(6)) };
+      const point = { lat: Number(event.lngLat.lat.toFixed(6)), lng: Number(event.lngLat.lng.toFixed(6)) };
       setSelectedPoint(point);
       if (selectedMarkerRef.current) selectedMarkerRef.current.remove();
-      selectedMarkerRef.current = L.marker([point.lat, point.lng], {
-        icon: L.divIcon({ className: 'catgo-map-selected-pin', html: '<span>📍</span>', iconSize: [34, 38], iconAnchor: [17, 34] }),
-      }).addTo(map);
+      const element = document.createElement('div');
+      element.className = 'catgo-map-selected-pin';
+      element.innerHTML = '<span>📍</span>';
+      selectedMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
+        .setLngLat([point.lng, point.lat])
+        .addTo(map);
     });
 
-    const resizeTimer = window.setTimeout(() => map.invalidateSize(), 150);
+    const resizeTimer = window.setTimeout(() => map.resize(), 150);
     return () => {
       window.clearTimeout(resizeTimer);
       map.remove();
       mapRef.current = null;
+      selectedMarkerRef.current = null;
     };
   }, []);
 
@@ -250,19 +268,23 @@ function SharedCatMap({ onMessage }) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !backendReady) return;
-    const group = L.layerGroup().addTo(map);
+    const markers = [];
     sightings.forEach((sighting) => {
-      const marker = L.marker([Number(sighting.latitude), Number(sighting.longitude)], {
-        icon: L.divIcon({ className: 'catgo-map-cat-pin', html: '<span>🐈</span>', iconSize: [38, 42], iconAnchor: [19, 38] }),
-      });
+      const element = document.createElement('div');
+      element.className = 'catgo-map-cat-pin';
+      element.innerHTML = '<span>🐈</span>';
       const title = String(sighting.cat_name || 'Котик').replace(/[&<>"]/g, '');
       const photo = typeof sighting.photo_url === 'string' && /^https:\/\//.test(sighting.photo_url)
         ? '<img src="' + sighting.photo_url.replace(/["<>]/g, '') + '" alt="" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:6px">'
         : '';
-      marker.bindPopup(photo + '<strong>' + title + '</strong>' + (sighting.created_at ? '<br><small>' + new Date(sighting.created_at).toLocaleDateString('ru-RU') + '</small>' : ''));
-      marker.addTo(group);
+      const popupHtml = photo + '<strong>' + title + '</strong>' + (sighting.created_at ? '<br><small>' + new Date(sighting.created_at).toLocaleDateString('ru-RU') + '</small>' : '');
+      const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
+        .setLngLat([Number(sighting.longitude), Number(sighting.latitude)])
+        .setPopup(new maplibregl.Popup({ offset: 24 }).setHTML(popupHtml))
+        .addTo(map);
+      markers.push(marker);
     });
-    return () => { group.remove(); };
+    return () => { markers.forEach((marker) => marker.remove()); };
   }, [sightings, backendReady]);
 
   function locateMe() {
@@ -272,9 +294,18 @@ function SharedCatMap({ onMessage }) {
     }
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        const point = [coords.latitude, coords.longitude];
-        mapRef.current?.setView(point, 15);
+        const point = [coords.longitude, coords.latitude];
+        mapRef.current?.flyTo({ center: point, zoom: 15 });
         setSelectedPoint({ lat: Number(coords.latitude.toFixed(6)), lng: Number(coords.longitude.toFixed(6)) });
+        if (selectedMarkerRef.current) selectedMarkerRef.current.remove();
+        const element = document.createElement('div');
+        element.className = 'catgo-map-selected-pin';
+        element.innerHTML = '<span>📍</span>';
+        if (mapRef.current) {
+          selectedMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
+            .setLngLat(point)
+            .addTo(mapRef.current);
+        }
         onMessage('Точка выбрана. Перед публикацией проверь, не раскрывает ли она чужой дом.');
       },
       () => onMessage('Не удалось получить геолокацию. Можно выбрать точку нажатием на карту.'),
@@ -348,7 +379,6 @@ function SharedCatMap({ onMessage }) {
     </section>
   );
 }
-
 function App() {
   const [serverReady, setServerReady] = useState(false);
   const [profileSyncDone, setProfileSyncDone] = useState(false);
