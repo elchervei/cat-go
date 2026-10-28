@@ -4,7 +4,7 @@ import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, Trophy, UserRound, X, Zap, Heart,
   Shield, Trash2, Download, Info, Users, UserPlus, Search,
-  Save, Palette, Pencil, UserCheck, UserX
+  Save, Palette, Pencil, UserCheck, UserX, Store, Lock, CheckCircle2
 } from 'lucide-react';
 import './style.css';
 
@@ -69,6 +69,15 @@ const backgroundLabels = {
   sky: 'Небо',
   night: 'Ночь',
   peach: 'Персик',
+};
+
+const backgroundUnlockLevels = {
+  lavender: 1,
+  sunset: 2,
+  mint: 3,
+  sky: 4,
+  peach: 6,
+  night: 8,
 };
 
 function readJSON(key, fallback) {
@@ -995,8 +1004,9 @@ function App() {
               <ImagePlus size={18} /> Выбрать из галереи
             </button>
             <label className="field-label"><Palette size={16} /> Фон профиля</label>
+            <p className="muted">Новые фоны открываются за уровни в магазине.</p>
             <div className="background-picker">
-              {Object.keys(backgrounds).map((key) => (
+              {Object.keys(backgrounds).filter((key) => level >= backgroundUnlockLevels[key]).map((key) => (
                 <button
                   key={key}
                   className={`background-option ${profileBackground === key ? 'selected' : ''}`}
@@ -1010,6 +1020,9 @@ function App() {
                 </button>
               ))}
             </div>
+            <button className="secondary-button full" onClick={() => setTab('shop')}>
+              <Store size={17} /> Открыть магазин фонов
+            </button>
             <button className="primary-button full" onClick={saveProfile} disabled={savingProfile}>
               <Save size={18} /> {savingProfile ? 'Сохраняю…' : 'Сохранить профиль'}
             </button>
@@ -1066,6 +1079,61 @@ function App() {
             <ChevronRight size={20} />
           </button>
           <p className="privacy-note"><Shield size={15} /> Аватар сохраняется в профиле после сжатия. Не загружай изображения, содержащие личные данные.</p>
+        </main>
+      )}
+
+      {tab === 'shop' && (
+        <main className="page">
+          <section className="section-head">
+            <div>
+              <span className="eyebrow">НАГРАДЫ ЗА ПРОГРЕСС</span>
+              <h1><Store size={25} /> Магазин</h1>
+              <p className="muted">Повышай уровень, чтобы открывать новые оформления профиля. XP не тратится — разблокировки остаются навсегда.</p>
+            </div>
+          </section>
+
+          <section className="shop-level-card">
+            <div className="shop-level-icon"><Zap size={23} /></div>
+            <div className="shop-level-copy">
+              <strong>Уровень {level}</strong>
+              <span>{xp} XP · следующий уровень через {100 - nextXP} XP</span>
+              <div className="progress"><i style={{ width: `${nextXP}%` }} /></div>
+            </div>
+          </section>
+
+          <div className="shop-grid">
+            {Object.keys(backgrounds).map((key) => {
+              const requiredLevel = backgroundUnlockLevels[key];
+              const unlocked = level >= requiredLevel;
+              const equipped = profileBackground === key;
+              return (
+                <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={key}>
+                  <div className="shop-preview" style={{ background: backgrounds[key] }}>
+                    <span className="shop-preview-cat">🐈</span>
+                    {!unlocked && <span className="shop-lock"><Lock size={16} /> Ур. {requiredLevel}</span>}
+                    {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
+                  </div>
+                  <div className="shop-item-body">
+                    <strong>{backgroundLabels[key]}</strong>
+                    <small>{unlocked ? (equipped ? 'Уже используется' : 'Открыто') : `Откроется на уровне ${requiredLevel}`}</small>
+                    <button
+                      className={equipped ? 'secondary-button full' : 'primary-button full'}
+                      disabled={!unlocked || equipped}
+                      onClick={() => {
+                        setProfileBackground(key);
+                        setProfile((prev) => ({ ...prev, background_key: key }));
+                        setMessage(`Фон «${backgroundLabels[key]}» выбран. Нажми «Сохранить профиль», чтобы применить его.`);
+                        setTab('profile');
+                      }}
+                    >
+                      {equipped ? 'Используется' : unlocked ? 'Выбрать фон' : <><Lock size={15} /> Закрыто</>}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <div className="note-card"><Sparkles size={18} /><p>Сейчас в магазине косметика профиля. Позже сюда можно добавить рамки аватара, оформление карточек и аксессуары. XP остаётся твоим прогрессом и не списывается при разблокировке.</p></div>
         </main>
       )}
 
@@ -1242,6 +1310,7 @@ function App() {
         {[
           ['home', Compass, 'Главная'],
           ['collection', Cat, 'Коллекция'],
+          ['shop', Store, 'Магазин'],
           ['friends', Users, 'Друзья'],
           ['missions', Trophy, 'Задания'],
           ['profile', UserRound, 'Профиль'],
