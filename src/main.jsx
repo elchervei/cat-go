@@ -72,13 +72,33 @@ const backgroundLabels = {
 };
 
 const backgroundUnlockLevels = {
-  lavender: 1,
-  sunset: 2,
-  mint: 3,
-  sky: 4,
-  peach: 6,
-  night: 8,
+  lavender: 1, sunset: 2, mint: 3, sky: 4, peach: 6, night: 8,
 };
+
+const avatarFrames = [
+  { key: 'none', label: 'Без рамки', emoji: '⭕', level: 1, style: 'frame-none' },
+  { key: 'gold', label: 'Золотая', emoji: '👑', level: 3, style: 'frame-gold' },
+  { key: 'rose', label: 'Розовая', emoji: '🌸', level: 5, style: 'frame-rose' },
+  { key: 'neon', label: 'Неоновая', emoji: '⚡', level: 7, style: 'frame-neon' },
+  { key: 'cosmic', label: 'Космическая', emoji: '🌌', level: 10, style: 'frame-cosmic' },
+];
+
+const cardStyles = [
+  { key: 'classic', label: 'Классика', level: 1, style: 'card-style-classic', emoji: '🐈' },
+  { key: 'rose', label: 'Розовый блеск', level: 2, style: 'card-style-rose', emoji: '🌸' },
+  { key: 'mint', label: 'Мятный', level: 4, style: 'card-style-mint', emoji: '🍃' },
+  { key: 'night', label: 'Ночная охота', level: 7, style: 'card-style-night', emoji: '🌙' },
+  { key: 'gold', label: 'Золотая коллекция', level: 10, style: 'card-style-gold', emoji: '✨' },
+];
+
+const avatarAccessories = [
+  { key: 'none', label: 'Без аксессуара', emoji: '', level: 1 },
+  { key: 'bow', label: 'Бантик', emoji: '🎀', level: 2 },
+  { key: 'glasses', label: 'Очки', emoji: '🕶️', level: 4 },
+  { key: 'crown', label: 'Корона', emoji: '👑', level: 6 },
+  { key: 'halo', label: 'Ореол', emoji: '😇', level: 8 },
+  { key: 'party', label: 'Праздничная шапка', emoji: '🥳', level: 12 },
+];
 
 function readJSON(key, fallback) {
   try {
@@ -203,13 +223,12 @@ function App() {
       }
 
       try {
-        const [cardsResult, profileResult, friendsResult, requestsResult] =
-          await Promise.allSettled([
-            catgoRequest('get_cards'),
-            catgoRequest('profile'),
-            catgoRequest('friends_list'),
-            catgoRequest('friend_requests'),
-          ]);
+        // Load only essential game data before showing the app.
+        // Friends and requests are fetched after the first screen is ready.
+        const [cardsResult, profileResult] = await Promise.allSettled([
+          catgoRequest('get_cards'),
+          catgoRequest('profile'),
+        ]);
 
         if (cancelled) return;
         if (cardsResult.status === 'rejected') throw cardsResult.reason;
@@ -237,23 +256,20 @@ function App() {
           );
         }
 
-        if (friendsResult.status === 'fulfilled') {
-          setFriends(friendsResult.value.friends || []);
-        }
-        if (requestsResult.status === 'fulfilled') {
-          setFriendRequests(requestsResult.value.requests || []);
-        }
-
-        if (
-          friendsResult.status === 'rejected' ||
-          requestsResult.status === 'rejected'
-        ) {
-          setMessage(
-            'Коллекция загружена. Проверь SQL-настройку социальных функций Supabase.'
-          );
-        }
-
         setServerReady(true);
+
+        Promise.allSettled([
+          catgoRequest('friends_list'),
+          catgoRequest('friend_requests'),
+        ]).then(([friendsResult, requestsResult]) => {
+          if (cancelled) return;
+          if (friendsResult.status === 'fulfilled') {
+            setFriends(friendsResult.value.friends || []);
+          }
+          if (requestsResult.status === 'fulfilled') {
+            setFriendRequests(requestsResult.value.requests || []);
+          }
+        });
       } catch (error) {
         if (!cancelled) {
           setMessage(`Не удалось загрузить коллекцию: ${error.message}`);
@@ -492,6 +508,9 @@ function App() {
         avatar_url: profileAvatar || null,
         background_key: profileBackground,
         showcase_card_ids: showcaseIds,
+        avatar_frame_key: profile.avatar_frame_key || 'none',
+        avatar_accessory_key: profile.avatar_accessory_key || 'none',
+        cat_card_style_key: profile.cat_card_style_key || 'classic',
       };
 
       if (TG?.initData) {
@@ -500,6 +519,9 @@ function App() {
           avatar_url: profileAvatar || null,
           background_key: profileBackground,
           showcase_card_ids: showcaseIds,
+          avatar_frame_key: profile.avatar_frame_key || 'none',
+          avatar_accessory_key: profile.avatar_accessory_key || 'none',
+          cat_card_style_key: profile.cat_card_style_key || 'classic',
         });
         setProfile({ ...updated, ...(result.profile || {}) });
       } else {
@@ -895,7 +917,7 @@ function App() {
               </div>
               <div className="card-grid">
                 {sortedCards.map((card) => (
-                  <article className="cat-card" key={card.id}>
+                  <article className={`cat-card ${(cardStyles.find((item) => item.key === profile.cat_card_style_key) || cardStyles[0]).style}`} key={card.id}>
                     <div className="cat-photo">
                       <img src={card.photo} alt={card.name || 'Кот'} />
                       <button className="delete-card" aria-label="Удалить карточку" onClick={() => removeCard(card.id)}>
@@ -976,10 +998,14 @@ function App() {
       {tab === 'profile' && (
         <main className="page">
           <section className="profile-edit-hero" style={{ background: profileBackgroundStyle }}>
-            <div className="profile-avatar-wrap">
+            <div className={`profile-avatar-wrap ${(avatarFrames.find((item) => item.key === profile.avatar_frame_key) || avatarFrames[0]).style}`}>
               {profileAvatar
                 ? <img className="profile-avatar-img" src={profileAvatar} alt="Аватар профиля" />
                 : <div className="profile-avatar">🐈</div>}
+              {(() => {
+                const accessory = avatarAccessories.find((item) => item.key === profile.avatar_accessory_key);
+                return accessory?.emoji ? <span className="avatar-accessory" aria-label={accessory.label}>{accessory.emoji}</span> : null;
+              })()}
               <button className="avatar-edit-button" onClick={() => avatarInputRef.current?.click()} aria-label="Изменить аватар">
                 <Camera size={16} />
               </button>
@@ -1101,39 +1127,93 @@ function App() {
             </div>
           </section>
 
-          <div className="shop-grid">
-            {Object.keys(backgrounds).map((key) => {
-              const requiredLevel = backgroundUnlockLevels[key];
-              const unlocked = level >= requiredLevel;
-              const equipped = profileBackground === key;
-              return (
-                <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={key}>
-                  <div className="shop-preview" style={{ background: backgrounds[key] }}>
-                    <span className="shop-preview-cat">🐈</span>
-                    {!unlocked && <span className="shop-lock"><Lock size={16} /> Ур. {requiredLevel}</span>}
+          <section className="shop-category">
+            <h2><Palette size={19} /> Фоны профиля</h2>
+            <div className="shop-grid">
+              {Object.keys(backgrounds).map((key) => {
+                const requiredLevel = backgroundUnlockLevels[key];
+                const unlocked = level >= requiredLevel;
+                const equipped = profileBackground === key;
+                return (
+                  <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`bg-${key}`}>
+                    <div className="shop-preview" style={{ background: backgrounds[key] }}>
+                      <span className="shop-preview-cat">🐈</span>
+                      {!unlocked && <span className="shop-lock"><Lock size={16} /> Ур. {requiredLevel}</span>}
+                      {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
+                    </div>
+                    <div className="shop-item-body">
+                      <strong>{backgroundLabels[key]}</strong>
+                      <small>{unlocked ? (equipped ? 'Уже используется' : 'Открыто') : `Откроется на уровне ${requiredLevel}`}</small>
+                      <button className={equipped ? 'secondary-button full' : 'primary-button full'} disabled={!unlocked || equipped}
+                        onClick={() => { setProfileBackground(key); setProfile((prev) => ({ ...prev, background_key: key })); setMessage(`Фон «${backgroundLabels[key]}» выбран. Не забудь сохранить профиль.`); }}>
+                        {equipped ? 'Используется' : unlocked ? 'Выбрать' : <><Lock size={15} /> Закрыто</>}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="shop-category">
+            <h2><UserRound size={19} /> Рамки аватара</h2>
+            <div className="shop-grid">
+              {avatarFrames.map((item) => {
+                const unlocked = level >= item.level;
+                const equipped = (profile.avatar_frame_key || 'none') === item.key;
+                return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`frame-${item.key}`}>
+                  <div className={`shop-preview cosmetic-preview ${item.style}`}>
+                    <div className="cosmetic-avatar">🐈</div>
+                    {!unlocked && <span className="shop-lock"><Lock size={15} /> Ур. {item.level}</span>}
                     {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
                   </div>
-                  <div className="shop-item-body">
-                    <strong>{backgroundLabels[key]}</strong>
-                    <small>{unlocked ? (equipped ? 'Уже используется' : 'Открыто') : `Откроется на уровне ${requiredLevel}`}</small>
-                    <button
-                      className={equipped ? 'secondary-button full' : 'primary-button full'}
-                      disabled={!unlocked || equipped}
-                      onClick={() => {
-                        setProfileBackground(key);
-                        setProfile((prev) => ({ ...prev, background_key: key }));
-                        setMessage(`Фон «${backgroundLabels[key]}» выбран. Нажми «Сохранить профиль», чтобы применить его.`);
-                        setTab('profile');
-                      }}
-                    >
-                      {equipped ? 'Используется' : unlocked ? 'Выбрать фон' : <><Lock size={15} /> Закрыто</>}
-                    </button>
+                  <div className="shop-item-body"><strong>{item.label}</strong><small>{unlocked ? (equipped ? 'Уже используется' : 'Открыто') : `Откроется на уровне ${item.level}`}</small>
+                    <button className={equipped ? 'secondary-button full' : 'primary-button full'} disabled={!unlocked || equipped} onClick={() => setProfile((prev) => ({ ...prev, avatar_frame_key: item.key }))}>{equipped ? 'Используется' : unlocked ? 'Надеть рамку' : <><Lock size={15} /> Закрыто</>}</button>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-          <div className="note-card"><Sparkles size={18} /><p>Сейчас в магазине косметика профиля. Позже сюда можно добавить рамки аватара, оформление карточек и аксессуары. XP остаётся твоим прогрессом и не списывается при разблокировке.</p></div>
+                </article>;
+              })}
+            </div>
+          </section>
+
+          <section className="shop-category">
+            <h2><Cat size={19} /> Оформление карточек</h2>
+            <div className="shop-grid">
+              {cardStyles.map((item) => {
+                const unlocked = level >= item.level;
+                const equipped = (profile.cat_card_style_key || 'classic') === item.key;
+                return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`card-${item.key}`}>
+                  <div className={`shop-preview ${item.style}`}><span className="shop-preview-cat">{item.emoji}</span>
+                    {!unlocked && <span className="shop-lock"><Lock size={15} /> Ур. {item.level}</span>}
+                    {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
+                  </div>
+                  <div className="shop-item-body"><strong>{item.label}</strong><small>{unlocked ? (equipped ? 'Уже используется' : 'Открыто') : `Откроется на уровне ${item.level}`}</small>
+                    <button className={equipped ? 'secondary-button full' : 'primary-button full'} disabled={!unlocked || equipped} onClick={() => setProfile((prev) => ({ ...prev, cat_card_style_key: item.key }))}>{equipped ? 'Используется' : unlocked ? 'Выбрать стиль' : <><Lock size={15} /> Закрыто</>}</button>
+                  </div>
+                </article>;
+              })}
+            </div>
+          </section>
+
+          <section className="shop-category">
+            <h2><Sparkles size={19} /> Аксессуары аватара</h2>
+            <div className="shop-grid">
+              {avatarAccessories.map((item) => {
+                const unlocked = level >= item.level;
+                const equipped = (profile.avatar_accessory_key || 'none') === item.key;
+                return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`accessory-${item.key}`}>
+                  <div className="shop-preview accessory-preview" style={{ background: backgrounds[profileBackground] || backgrounds.lavender }}>
+                    <span className="shop-preview-cat">{item.emoji || '🐈'}</span>
+                    {!unlocked && <span className="shop-lock"><Lock size={15} /> Ур. {item.level}</span>}
+                    {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
+                  </div>
+                  <div className="shop-item-body"><strong>{item.label}</strong><small>{unlocked ? (equipped ? 'Уже используется' : 'Открыто') : `Откроется на уровне ${item.level}`}</small>
+                    <button className={equipped ? 'secondary-button full' : 'primary-button full'} disabled={!unlocked || equipped} onClick={() => setProfile((prev) => ({ ...prev, avatar_accessory_key: item.key }))}>{equipped ? 'Используется' : unlocked ? 'Надеть' : <><Lock size={15} /> Закрыто</>}</button>
+                  </div>
+                </article>;
+              })}
+            </div>
+          </section>
+          <div className="note-card"><Sparkles size={18} /><p>Награды открываются за уровень, XP не списывается. Выбери оформление, затем зайди в профиль и нажми «Сохранить профиль».</p></div>
         </main>
       )}
 
@@ -1285,7 +1365,7 @@ function App() {
                   return featured.length ? (
                     <div className="card-grid">
                       {featured.map((card) => (
-                        <article className="cat-card" key={card.id}>
+                        <article className={`cat-card ${(cardStyles.find((item) => item.key === viewingFriend.profile?.cat_card_style_key) || cardStyles[0]).style}`} key={card.id}>
                           <div className="cat-card-image-wrap">
                             <img src={card.photo} alt={card.name || 'Кот'} />
                           </div>
