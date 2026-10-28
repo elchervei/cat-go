@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, Trophy, UserRound, X, Zap, Heart,
-  Shield, Footprints, Trash2, Download, Info, Users, UserPlus, Search,
-  Save, Palette, Pencil, UserCheck, UserX
+  Shield, Trash2, Download, Info, Users, UserPlus, Search,
+  Save, Palette, Pencil, UserCheck, UserX, Store, Lock, CheckCircle2
 } from 'lucide-react';
 import './style.css';
 
@@ -47,25 +47,10 @@ const XP_KEY = 'catgo_v1_xp';
 const MISSION_KEY = 'catgo_v1_missions';
 const PROFILE_KEY = 'catgo_v1_profile';
 
-const rarities = [
-  { name: 'Обычный', color: '#8a9a86', bonus: 10 },
-  { name: 'Необычный', color: '#52a88a', bonus: 20 },
-  { name: 'Редкий', color: '#6b83df', bonus: 35 },
-  { name: 'Эпический', color: '#a16bce', bonus: 60 },
-  { name: 'Легендарный', color: '#e3a52f', bonus: 100 },
-];
-
 const names = [
   'Пушистый исследователь', 'Рыжий охотник', 'Сонный философ',
   'Усатый путешественник', 'Хозяин дивана', 'Тихий наблюдатель',
   'Солнечный комочек', 'Ночной прыгун',
-];
-
-const traits = [
-  { label: 'Любопытство', icon: CircleHelp, min: 35, max: 99 },
-  { label: 'Ловкость', icon: Footprints, min: 30, max: 99 },
-  { label: 'Дружелюбие', icon: Heart, min: 35, max: 99 },
-  { label: 'Смелость', icon: Shield, min: 25, max: 99 },
 ];
 
 const backgrounds = {
@@ -86,14 +71,14 @@ const backgroundLabels = {
   peach: 'Персик',
 };
 
-function rand(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function pickRarity() {
-  const n = Math.random();
-  return n > 0.985 ? 4 : n > 0.92 ? 3 : n > 0.72 ? 2 : n > 0.38 ? 1 : 0;
-}
+const backgroundUnlockLevels = {
+  lavender: 1,
+  sunset: 2,
+  mint: 3,
+  sky: 4,
+  peach: 6,
+  night: 8,
+};
 
 function readJSON(key, fallback) {
   try {
@@ -367,21 +352,12 @@ function App() {
   function prepareCard() {
     if (!photo) return;
 
-    const rarityIndex = pickRarity();
-    const values = traits.map((trait) => ({
-      label: trait.label,
-      value: rand(trait.min, trait.max),
-    }));
-
     setDraft({
       id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
       name: '',
-      rarity: rarities[rarityIndex],
-      rarityIndex,
-      traits: values,
       createdAt: Date.now(),
       photo,
-      xp: rarities[rarityIndex].bonus,
+      xp: 10,
       originalName: fileName,
     });
   }
@@ -854,9 +830,6 @@ function App() {
               ) : (
                 <div className="draft-card">
                   <div className="draft-head">
-                    <span className="rarity-pill" style={{ '--rarity': draft.rarity.color }}>
-                      {draft.rarity.name}
-                    </span>
                     <span className="xp-pill"><Zap size={14} /> +{draft.xp} XP</span>
                   </div>
                   <label className="field-label">Как зовут этого кота?</label>
@@ -867,16 +840,7 @@ function App() {
                     value={draft.name}
                     onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
                   />
-                  <p className="muted">Имя можно будет изменить позже.</p>
-                  <p className="muted">Характеристики для игры · генерируются случайно</p>
-                  <div className="traits-grid">
-                    {draft.traits.map((trait) => (
-                      <div className="trait" key={trait.label}>
-                        <div className="trait-head"><span>{trait.label}</span><b>{trait.value}</b></div>
-                        <div className="trait-bar"><i style={{ width: `${trait.value}%` }} /></div>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="muted">Имя можно будет изменить позже. За каждого кота начисляется 10 XP.</p>
                   <div className="button-row">
                     <button className="secondary-button" onClick={() => setDraft(null)} disabled={savingCard}>
                       Назад
@@ -934,9 +898,6 @@ function App() {
                   <article className="cat-card" key={card.id}>
                     <div className="cat-photo">
                       <img src={card.photo} alt={card.name || 'Кот'} />
-                      <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>
-                        {card.rarity?.name || 'Обычный'}
-                      </span>
                       <button className="delete-card" aria-label="Удалить карточку" onClick={() => removeCard(card.id)}>
                         <Trash2 size={15} />
                       </button>
@@ -959,11 +920,6 @@ function App() {
                       <div className="cat-card-meta">
                         <span><Zap size={14} /> +{card.xp} XP</span>
                         <span>{new Date(card.createdAt || Date.now()).toLocaleDateString('ru-RU')}</span>
-                      </div>
-                      <div className="mini-traits">
-                        {(card.traits || []).map((trait) => (
-                          <span key={trait.label}>{trait.label}: <b>{trait.value}</b></span>
-                        ))}
                       </div>
                     </div>
                   </article>
@@ -1048,8 +1004,9 @@ function App() {
               <ImagePlus size={18} /> Выбрать из галереи
             </button>
             <label className="field-label"><Palette size={16} /> Фон профиля</label>
+            <p className="muted">Новые фоны открываются за уровни в магазине.</p>
             <div className="background-picker">
-              {Object.keys(backgrounds).map((key) => (
+              {Object.keys(backgrounds).filter((key) => level >= backgroundUnlockLevels[key]).map((key) => (
                 <button
                   key={key}
                   className={`background-option ${profileBackground === key ? 'selected' : ''}`}
@@ -1063,6 +1020,9 @@ function App() {
                 </button>
               ))}
             </div>
+            <button className="secondary-button full" onClick={() => setTab('shop')}>
+              <Store size={17} /> Открыть магазин фонов
+            </button>
             <button className="primary-button full" onClick={saveProfile} disabled={savingProfile}>
               <Save size={18} /> {savingProfile ? 'Сохраняю…' : 'Сохранить профиль'}
             </button>
@@ -1070,7 +1030,7 @@ function App() {
 
           <div className="profile-stat-row">
             <div><strong>{cards.length}</strong><span>Котов собрано</span></div>
-            <div><strong>{cards.filter((card) => Number(card.rarityIndex) >= 3).length}</strong><span>Особых находок</span></div>
+            <div><strong>{xp}</strong><span>Всего XP</span></div>
             <div><strong>{level}</strong><span>Уровень</span></div>
           </div>
 
@@ -1119,6 +1079,61 @@ function App() {
             <ChevronRight size={20} />
           </button>
           <p className="privacy-note"><Shield size={15} /> Аватар сохраняется в профиле после сжатия. Не загружай изображения, содержащие личные данные.</p>
+        </main>
+      )}
+
+      {tab === 'shop' && (
+        <main className="page">
+          <section className="section-head">
+            <div>
+              <span className="eyebrow">НАГРАДЫ ЗА ПРОГРЕСС</span>
+              <h1><Store size={25} /> Магазин</h1>
+              <p className="muted">Повышай уровень, чтобы открывать новые оформления профиля. XP не тратится — разблокировки остаются навсегда.</p>
+            </div>
+          </section>
+
+          <section className="shop-level-card">
+            <div className="shop-level-icon"><Zap size={23} /></div>
+            <div className="shop-level-copy">
+              <strong>Уровень {level}</strong>
+              <span>{xp} XP · следующий уровень через {100 - nextXP} XP</span>
+              <div className="progress"><i style={{ width: `${nextXP}%` }} /></div>
+            </div>
+          </section>
+
+          <div className="shop-grid">
+            {Object.keys(backgrounds).map((key) => {
+              const requiredLevel = backgroundUnlockLevels[key];
+              const unlocked = level >= requiredLevel;
+              const equipped = profileBackground === key;
+              return (
+                <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={key}>
+                  <div className="shop-preview" style={{ background: backgrounds[key] }}>
+                    <span className="shop-preview-cat">🐈</span>
+                    {!unlocked && <span className="shop-lock"><Lock size={16} /> Ур. {requiredLevel}</span>}
+                    {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
+                  </div>
+                  <div className="shop-item-body">
+                    <strong>{backgroundLabels[key]}</strong>
+                    <small>{unlocked ? (equipped ? 'Уже используется' : 'Открыто') : `Откроется на уровне ${requiredLevel}`}</small>
+                    <button
+                      className={equipped ? 'secondary-button full' : 'primary-button full'}
+                      disabled={!unlocked || equipped}
+                      onClick={() => {
+                        setProfileBackground(key);
+                        setProfile((prev) => ({ ...prev, background_key: key }));
+                        setMessage(`Фон «${backgroundLabels[key]}» выбран. Нажми «Сохранить профиль», чтобы применить его.`);
+                        setTab('profile');
+                      }}
+                    >
+                      {equipped ? 'Используется' : unlocked ? 'Выбрать фон' : <><Lock size={15} /> Закрыто</>}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <div className="note-card"><Sparkles size={18} /><p>Сейчас в магазине косметика профиля. Позже сюда можно добавить рамки аватара, оформление карточек и аксессуары. XP остаётся твоим прогрессом и не списывается при разблокировке.</p></div>
         </main>
       )}
 
@@ -1273,17 +1288,9 @@ function App() {
                         <article className="cat-card" key={card.id}>
                           <div className="cat-card-image-wrap">
                             <img src={card.photo} alt={card.name || 'Кот'} />
-                            <span className="rarity-pill" style={{ '--rarity': card.rarity?.color || '#8a9a86' }}>
-                              {card.rarity?.name || 'Обычный'}
-                            </span>
                           </div>
                           <div className="cat-card-body">
                             <h3>{card.name || 'Без имени'}</h3>
-                            <div className="mini-traits">
-                              {(card.traits || []).map((trait) => (
-                                <span key={trait.label}>{trait.label}: <b>{trait.value}</b></span>
-                              ))}
-                            </div>
                           </div>
                         </article>
                       ))}
@@ -1325,7 +1332,7 @@ function App() {
             <div className="modal-icon">🐾</div>
             <h2>Добро пожаловать в Cat Go!</h2>
             <p>Фотографируй котов, давай им имена, оформляй профиль и добавляй друзей.</p>
-            <p><b>Важно:</b> редкость и характеристики пока генерируются игровыми правилами. Автоматическое распознавание котов и удаление фона ещё не подключены.</p>
+            <p><b>Важно:</b> сейчас фото сохраняется как карточка кота, а автоматическое распознавание котов и удаление фона ещё не подключены.</p>
             <button className="primary-button full" onClick={() => setShowInfo(false)}>Понятно!</button>
           </div>
         </div>
