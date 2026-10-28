@@ -187,6 +187,11 @@ function SharedCatMap({ onMessage }) {
   const mapRef = useRef(null);
   const selectedMarkerRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
+  const [sightingPhoto, setSightingPhoto] = useState('');
+  const [sightingPhotoName, setSightingPhotoName] = useState('');
+  const [sightingCatName, setSightingCatName] = useState('');
+  const [sightingDescription, setSightingDescription] = useState('');
+  const [publishingSighting, setPublishingSighting] = useState(false);
   const [sightings, setSightings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [backendReady, setBackendReady] = useState(false);
@@ -291,8 +296,55 @@ function SharedCatMap({ onMessage }) {
         </div>
         {selectedPoint && <button className="small-action" onClick={() => { navigator.clipboard?.writeText(`${selectedPoint.lat}, ${selectedPoint.lng}`); onMessage('Координаты скопированы.'); }} aria-label="Скопировать координаты"><Copy size={16} /></button>}
       </div>
-      {!backendReady && <div className="note-card"><Info size={18} /><p>Карта уже настоящая и интерактивная. Общие метки появятся после добавления действий map_sightings и map_create_sighting в Supabase Edge Function.</p></div>}
-      {backendReady && sightings.length === 0 && <div className="empty-state compact"><div className="empty-paw">🐾</div><h2>Пока нет находок</h2><p>Выбери место на карте. Публикация станет доступна после подключения защищённой загрузки фото.</p></div>}
+      <section className="sighting-publish-card">
+        <h2><Cat size={19} /> Добавить кота на общую карту</h2>
+        <p className="muted">Выбери точку на карте и загрузи фото реального кота. Координаты будут округлены примерно до 100 метров для приватности.</p>
+        <label className="sighting-upload">
+          <ImagePlus size={20} />
+          <span>{sightingPhotoName || 'Выбрать фото кота из галереи'}</span>
+          <input type="file" accept="image/*" onChange={async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) { onMessage('Выбери файл изображения.'); return; }
+            try {
+              const dataUrl = await compressImage(file, 1280, 0.76);
+              if (dataUrl.length > 2_000_000) { onMessage('Фото получилось слишком большим. Выбери другое.'); return; }
+              setSightingPhoto(dataUrl);
+              setSightingPhotoName(file.name);
+            } catch (error) { onMessage(error.message || 'Не удалось обработать фото.'); }
+          }} />
+        </label>
+        {sightingPhoto && <img className="sighting-photo-preview" src={sightingPhoto} alt="Предпросмотр находки" />}
+        <input className="field-input" maxLength={80} value={sightingCatName} onChange={(event) => setSightingCatName(event.target.value)} placeholder="Имя кота (например, Рыжик)" />
+        <textarea className="field-input sighting-description" maxLength={500} value={sightingDescription} onChange={(event) => setSightingDescription(event.target.value)} placeholder="Описание (необязательно)" rows={3} />
+        <button className="primary-button full" disabled={!backendReady || !selectedPoint || !sightingPhoto || publishingSighting} onClick={async () => {
+          setPublishingSighting(true);
+          try {
+            await catgoRequest('map_create_sighting', {
+              latitude: selectedPoint.lat,
+              longitude: selectedPoint.lng,
+              cat_name: sightingCatName.trim() || 'Котик',
+              description: sightingDescription.trim(),
+              photo_data_url: sightingPhoto,
+            });
+            const result = await catgoRequest('map_sightings');
+            const rows = Array.isArray(result.sightings) ? result.sightings : [];
+            setSightings(rows.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))));
+            setSightingPhoto('');
+            setSightingPhotoName('');
+            setSightingCatName('');
+            setSightingDescription('');
+            onMessage('Находка опубликована на общей карте!');
+          } catch (error) {
+            onMessage(error.message || 'Не удалось опубликовать находку.');
+          } finally { setPublishingSighting(false); }
+        }}>
+          <MapPin size={17} /> {publishingSighting ? 'Публикуем…' : !selectedPoint ? 'Сначала выбери точку на карте' : !backendReady ? 'Подключаем сервер…' : 'Опубликовать находку'}
+        </button>
+        <small className="privacy-note">Публикуй только фото котов, которые ты вправе размещать. Автоматическая проверка, что на фото именно кот, пока не подключена.</small>
+      </section>
+      {!backendReady && <div className="note-card"><Info size={18} /><p>Для публикации обнови Supabase Edge Function и создай хранилище cat-sightings по инструкции из новой миграции.</p></div>}
+      {backendReady && sightings.length === 0 && <div className="empty-state compact"><div className="empty-paw">🐾</div><h2>Пока нет находок</h2><p>Добавь первую находку, чтобы она появилась у всех игроков.</p></div>}
     </section>
   );
 }
