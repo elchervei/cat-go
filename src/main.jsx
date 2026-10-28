@@ -4,8 +4,10 @@ import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, Trophy, UserRound, X, Zap, Heart,
   Shield, Trash2, Download, Info, Users, UserPlus, Search,
-  Save, Palette, Pencil, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed
+  Save, Palette, Pencil, Copy, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed
 } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import './style.css';
 
 const TG = window.Telegram?.WebApp;
@@ -179,12 +181,129 @@ const emptyProfile = {
   background_key: 'lavender',
 };
 
+
+function SharedCatMap({ onMessage }) {
+  const mapElementRef = useRef(null);
+  const mapRef = useRef(null);
+  const selectedMarkerRef = useRef(null);
+  const [selectedPoint, setSelectedPoint] = useState(null);
+  const [sightings, setSightings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [backendReady, setBackendReady] = useState(false);
+
+  useEffect(() => {
+    if (!mapElementRef.current || mapRef.current) return undefined;
+    const map = L.map(mapElementRef.current, { zoomControl: true }).setView([51.1657, 10.4515], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+    mapRef.current = map;
+
+    map.on('click', (event) => {
+      const point = { lat: Number(event.latlng.lat.toFixed(6)), lng: Number(event.latlng.lng.toFixed(6)) };
+      setSelectedPoint(point);
+      if (selectedMarkerRef.current) selectedMarkerRef.current.remove();
+      selectedMarkerRef.current = L.marker([point.lat, point.lng], {
+        icon: L.divIcon({ className: 'catgo-map-selected-pin', html: '<span>📍</span>', iconSize: [34, 38], iconAnchor: [17, 34] }),
+      }).addTo(map);
+    });
+
+    const resizeTimer = window.setTimeout(() => map.invalidateSize(), 150);
+    return () => {
+      window.clearTimeout(resizeTimer);
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSightings() {
+      setLoading(true);
+      try {
+        const result = await catgoRequest('map_sightings');
+        if (cancelled) return;
+        const rows = Array.isArray(result.sightings) ? result.sightings : [];
+        setSightings(rows.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))));
+        setBackendReady(true);
+      } catch (error) {
+        if (!cancelled) {
+          setBackendReady(false);
+          if (String(error.message).includes('Открой игру через Telegram')) {
+            onMessage('Открой Cat Go через Telegram, чтобы загружать общие находки.');
+          }
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadSightings();
+    return () => { cancelled = true; };
+  }, [onMessage]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !backendReady) return;
+    const group = L.layerGroup().addTo(map);
+    sightings.forEach((sighting) => {
+      const marker = L.marker([Number(sighting.latitude), Number(sighting.longitude)], {
+        icon: L.divIcon({ className: 'catgo-map-cat-pin', html: '<span>🐈</span>', iconSize: [38, 42], iconAnchor: [19, 38] }),
+      });
+      const title = String(sighting.cat_name || 'Котик').replace(/[&<>"]/g, '');
+      const photo = typeof sighting.photo_url === 'string' && /^https:\/\//.test(sighting.photo_url)
+        ? '<img src="' + sighting.photo_url.replace(/["<>]/g, '') + '" alt="" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:6px">'
+        : '';
+      marker.bindPopup(photo + '<strong>' + title + '</strong>' + (sighting.created_at ? '<br><small>' + new Date(sighting.created_at).toLocaleDateString('ru-RU') + '</small>' : ''));
+      marker.addTo(group);
+    });
+    return () => { group.remove(); };
+  }, [sightings, backendReady]);
+
+  function locateMe() {
+    if (!navigator.geolocation) {
+      onMessage('Геолокация не поддерживается этим устройством.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const point = [coords.latitude, coords.longitude];
+        mapRef.current?.setView(point, 15);
+        setSelectedPoint({ lat: Number(coords.latitude.toFixed(6)), lng: Number(coords.longitude.toFixed(6)) });
+        onMessage('Точка выбрана. Перед публикацией проверь, не раскрывает ли она чужой дом.');
+      },
+      () => onMessage('Не удалось получить геолокацию. Можно выбрать точку нажатием на карту.'),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+    );
+  }
+
+  return (
+    <section className="shared-map-section">
+      <div className="shared-map-toolbar">
+        <span className="map-status"><span className={backendReady ? 'status-dot ready' : 'status-dot'} />{loading ? 'Загружаем метки…' : backendReady ? `${sightings.length} общих находок` : 'База меток подключается'}</span>
+        <button className="secondary-button map-locate-button" onClick={locateMe}><LocateFixed size={16} /> Моё место</button>
+      </div>
+      <div ref={mapElementRef} className="real-cat-map" aria-label="Интерактивная карта находок котов" />
+      <div className="map-selection-card">
+        <div>
+          <strong>{selectedPoint ? 'Точка выбрана' : 'Выбери точку на карте'}</strong>
+          <p>{selectedPoint ? `${selectedPoint.lat}, ${selectedPoint.lng}` : 'Нажми на карту, чтобы отметить место встречи с котом.'}</p>
+        </div>
+        {selectedPoint && <button className="small-action" onClick={() => { navigator.clipboard?.writeText(`${selectedPoint.lat}, ${selectedPoint.lng}`); onMessage('Координаты скопированы.'); }} aria-label="Скопировать координаты"><Copy size={16} /></button>}
+      </div>
+      {!backendReady && <div className="note-card"><Info size={18} /><p>Карта уже настоящая и интерактивная. Общие метки появятся после добавления действий map_sightings и map_create_sighting в Supabase Edge Function.</p></div>}
+      {backendReady && sightings.length === 0 && <div className="empty-state compact"><div className="empty-paw">🐾</div><h2>Пока нет находок</h2><p>Выбери место на карте. Публикация станет доступна после подключения защищённой загрузки фото.</p></div>}
+    </section>
+  );
+}
+
 function App() {
   const [serverReady, setServerReady] = useState(false);
   const [profileSyncDone, setProfileSyncDone] = useState(false);
   const [savingCard, setSavingCard] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [tab, setTab] = useState('home');
+  const ownerPreview = String(TG?.initDataUnsafe?.user?.username || '').toLowerCase() === 'elchervei';
 
   const [cards, setCards] = useState(() => readJSON(playerStorageKey(STORE_KEY), []));
   const [xp, setXp] = useState(() => Number(localStorage.getItem(playerStorageKey(XP_KEY)) || 0));
@@ -311,6 +430,8 @@ function App() {
   }, [profile, showcaseIds, profileSyncDone]);
 
   const level = Math.floor(xp / 100) + 1;
+  const unlockLevel = ownerPreview ? 999 : level;
+  const displayLevel = ownerPreview ? '∞' : level;
   const nextXP = xp % 100;
   const sortedCards = useMemo(
     () => [...cards].sort(
@@ -725,41 +846,16 @@ function App() {
             <div>
               <span className="eyebrow">КОШАЧЬЯ ЭКСПЕДИЦИЯ</span>
               <h1><MapPin size={26} /> Карта находок</h1>
-              <p className="muted">Общее пространство, где игроки смогут делиться встречами с котами.</p>
+              <p className="muted">Общая карта встреч с котами. Геолокация включается только по твоему нажатию.</p>
             </div>
           </section>
-
-          <section className="map-preview-panel">
-            <div className="map-preview-grid" aria-hidden="true" />
-            <div className="map-preview-road road-one" />
-            <div className="map-preview-road road-two" />
-            <div className="map-preview-road road-three" />
-            <div className="map-preview-park"><span>🌳</span><span>🌿</span><span>🌳</span></div>
-            <div className="map-preview-pin pin-one"><MapPin size={23} fill="currentColor" /><span>🐈</span></div>
-            <div className="map-preview-pin pin-two"><MapPin size={23} fill="currentColor" /><span>🐈</span></div>
-            <div className="map-preview-pin pin-three"><MapPin size={23} fill="currentColor" /><span>🐈</span></div>
-            <div className="map-preview-center">
-              <span className="map-preview-icon"><Layers size={23} /></span>
-              <strong>Карта готовится</strong>
-              <small>Это предварительный макет, не настоящая карта</small>
-            </div>
-          </section>
-
-          <section className="map-info-card">
-            <span className="map-info-icon"><LocateFixed size={20} /></span>
-            <div>
-              <strong>Что появится на карте</strong>
-              <p>Игроки смогут отмечать место встречи с котом, добавлять фото, а остальные — открывать метки и смотреть находки.</p>
-            </div>
-          </section>
-
+          <SharedCatMap onMessage={notify} />
           <section className="map-steps">
-            <h2>План внедрения</h2>
-            <div><span>1</span><p><strong>Публикация находки</strong><small>Фото кота и выбранная точка на карте.</small></p></div>
-            <div><span>2</span><p><strong>Общая карта игроков</strong><small>Метки загружаются из общей базы данных.</small></p></div>
-            <div><span>3</span><p><strong>Карточка по нажатию</strong><small>Фото, имя кота и дата встречи.</small></p></div>
+            <h2>Следующий этап</h2>
+            <div><span>1</span><p><strong>Публикация находки</strong><small>Защищённая загрузка фотографии и координат.</small></p></div>
+            <div><span>2</span><p><strong>Общая база</strong><small>Одна карта для всех игроков, отдельно от личной коллекции.</small></p></div>
+            <div><span>3</span><p><strong>Карточка кота и ИИ</strong><small>Порода, окрас, особенности мордочки и осторожная оценка настроения.</small></p></div>
           </section>
-          <div className="note-card"><Info size={18} /><p>Карта пока демонстрационная: геолокация не запрашивается и находки ещё не публикуются. Следующим этапом подключим настоящую карту и базу общих меток.</p></div>
         </main>
       )}
 
@@ -1051,7 +1147,7 @@ function App() {
             <input ref={avatarInputRef} className="hidden-input" type="file" accept="image/*" onChange={onAvatarFile} />
             <span className="eyebrow">ТВОЙ ПРОФИЛЬ</span>
             <h1>{profile.display_name || 'Котоисследователь'}</h1>
-            <p>Уровень {level} · {xp} XP</p>
+            <p>Уровень {displayLevel} · {xp} XP</p>
             {profile.username && <small className="profile-username">@{profile.username}</small>}
             <div className="profile-progress">
               <div className="progress"><i style={{ width: `${nextXP}%` }} /></div>
@@ -1068,9 +1164,9 @@ function App() {
               <ImagePlus size={18} /> Выбрать из галереи
             </button>
             <label className="field-label"><Palette size={16} /> Фон профиля</label>
-            <p className="muted">Новые фоны открываются за уровни в магазине.</p>
+            <p className="muted">Новые фоны открываются за уровни в магазине.</p>{ownerPreview && <p className="owner-preview-note">Режим владельца: все оформления доступны для просмотра. XP и серверный уровень не изменены.</p>}
             <div className="background-picker">
-              {Object.keys(backgrounds).filter((key) => level >= backgroundUnlockLevels[key]).map((key) => (
+              {Object.keys(backgrounds).filter((key) => unlockLevel >= backgroundUnlockLevels[key]).map((key) => (
                 <button
                   key={key}
                   className={`background-option ${profileBackground === key ? 'selected' : ''}`}
@@ -1095,7 +1191,7 @@ function App() {
           <div className="profile-stat-row">
             <div><strong>{cards.length}</strong><span>Котов собрано</span></div>
             <div><strong>{xp}</strong><span>Всего XP</span></div>
-            <div><strong>{level}</strong><span>Уровень</span></div>
+            <div><strong>{displayLevel}</strong><span>Уровень</span></div>
           </div>
 
           <section className="profile-editor panel">
@@ -1152,14 +1248,14 @@ function App() {
             <div>
               <span className="eyebrow">НАГРАДЫ ЗА ПРОГРЕСС</span>
               <h1><Store size={25} /> Магазин</h1>
-              <p className="muted">Повышай уровень, чтобы открывать новые оформления профиля. XP не тратится — разблокировки остаются навсегда.</p>
+              <p className="muted">Повышай уровень, чтобы открывать новые оформления профиля. XP не тратится — разблокировки остаются навсегда.</p>{ownerPreview && <p className="owner-preview-note">Режим владельца для @elchervei: все фоны, рамки, аксессуары и стили карт доступны для просмотра.</p>}
             </div>
           </section>
 
           <section className="shop-level-card">
             <div className="shop-level-icon"><Zap size={23} /></div>
             <div className="shop-level-copy">
-              <strong>Уровень {level}</strong>
+              <strong>Уровень {displayLevel}</strong>
               <span>{xp} XP · следующий уровень через {100 - nextXP} XP</span>
               <div className="progress"><i style={{ width: `${nextXP}%` }} /></div>
             </div>
@@ -1170,7 +1266,7 @@ function App() {
             <div className="shop-grid">
               {Object.keys(backgrounds).map((key) => {
                 const requiredLevel = backgroundUnlockLevels[key];
-                const unlocked = level >= requiredLevel;
+                const unlocked = unlockLevel >= requiredLevel;
                 const equipped = profileBackground === key;
                 return (
                   <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`bg-${key}`}>
@@ -1197,7 +1293,7 @@ function App() {
             <h2><UserRound size={19} /> Рамки аватара</h2>
             <div className="shop-grid">
               {avatarFrames.map((item) => {
-                const unlocked = level >= item.level;
+                const unlocked = unlockLevel >= item.level;
                 const equipped = (profile.avatar_frame_key || 'none') === item.key;
                 return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`frame-${item.key}`}>
                   <div className={`shop-preview cosmetic-preview ${item.style}`}>
@@ -1217,7 +1313,7 @@ function App() {
             <h2><Cat size={19} /> Оформление карточек</h2>
             <div className="shop-grid">
               {cardStyles.map((item) => {
-                const unlocked = level >= item.level;
+                const unlocked = unlockLevel >= item.level;
                 const equipped = (profile.cat_card_style_key || 'classic') === item.key;
                 return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`card-${item.key}`}>
                   <div className={`shop-preview ${item.style}`}><span className="shop-preview-cat">{item.emoji}</span>
@@ -1236,7 +1332,7 @@ function App() {
             <h2><Sparkles size={19} /> Аксессуары аватара</h2>
             <div className="shop-grid">
               {avatarAccessories.map((item) => {
-                const unlocked = level >= item.level;
+                const unlocked = unlockLevel >= item.level;
                 const equipped = (profile.avatar_accessory_key || 'none') === item.key;
                 return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`accessory-${item.key}`}>
                   <div className="shop-preview accessory-preview" style={{ background: backgrounds[profileBackground] || backgrounds.lavender }}>
