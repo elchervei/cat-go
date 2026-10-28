@@ -4,7 +4,7 @@ import {
   Camera, Cat, Check, ChevronRight, CircleHelp, Compass, ImagePlus,
   PawPrint, RotateCcw, Sparkles, UserRound, X, Zap, Heart,
   Shield, Trash2, Download, Info, Users, UserPlus, Search,
-  Save, Palette, Pencil, Copy, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed, Settings, Languages, Moon, Sun
+  Save, Palette, Pencil, Copy, UserCheck, UserX, Store, Lock, CheckCircle2, MapPin, Layers, LocateFixed, Settings, Languages, Moon, Sun, Eye
 } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -121,7 +121,61 @@ const UI_TRANSLATIONS = {
   'Новых запросов пока нет.':'No new requests yet.','Загружаем профиль и витрину…':'Loading profile and showcase…',
   'Добавь первую находку, чтобы она появилась у всех игроков.':'Add the first discovery so all players can see it.',
   'Публикуй только фото котов, которые ты вправе размещать.':'Only publish cat photos you have permission to share.',
-  'Автоматическая проверка, что на фото именно кот, пока не подключена.':'Automatic cat verification is not enabled yet.'
+  'Автоматическая проверка, что на фото именно кот, пока не подключена.':'Automatic cat verification is not enabled yet.',
+  'Магазин':'Customization','Настройки внешнего вида':'Appearance settings','Предпросмотр':'Preview','Посмотреть':'Preview','Закрыть':'Close',
+  'Пример оформления':'Style preview','Пример фона профиля':'Profile background preview','Пример рамки аватара':'Avatar frame preview',
+  'Пример оформления карточки':'Cat card style preview','Пример аксессуара':'Avatar accessory preview',
+  'Повышай уровень, чтобы открывать новые оформления профиля. XP не тратится — разблокировки остаются навсегда.':'Level up to unlock profile cosmetics. XP is never spent; unlocks are permanent.',
+  'Уровень':'Level','следующий уровень через':'to next level','Надето':'Equipped','Откроется на уровне':'Unlocks at level',
+  'Фон «':'Background “','выбран. Не забудь сохранить профиль.':'selected. Remember to save your profile.',
+  'Выбрано:':'Selected:','Котик':'Kitty','Кот':'Cat','Профиль сохранён!':'Profile saved!',
+  'Удалить карточку из коллекции?':'Delete this card from your collection?','Карточка удалена.':'Card deleted.',
+  'Не удалось загрузить коллекцию:':'Could not load collection:','Не удалось сохранить карточку:':'Could not save card:',
+  'Не удалось переименовать кота:':'Could not rename cat:','Не удалось удалить карточку:':'Could not delete card:',
+  'Не удалось обработать аватар.':'Could not process avatar.','Не удалось сохранить профиль:':'Could not save profile:',
+  'Не удалось найти игрока:':'Could not find player:','Не удалось отправить запрос:':'Could not send friend request:',
+  'Не удалось обработать запрос:':'Could not process request:','Не удалось удалить друга:':'Could not remove friend:',
+  'Не удалось открыть профиль друга:':'Could not open friend profile:','Запрос отклонён.':'Request declined.',
+  'Запрос принят. Вы теперь друзья!':'Request accepted. You are now friends!','Запрос в друзья отправлен.':'Friend request sent.',
+  'Вы уже друзья!':'You are already friends!','Игрок не найден. Он должен хотя бы раз открыть Cat Go.':'Player not found. They must open Cat Go at least once.',
+  'Найдено игроков:':'Players found:','Профили друзей доступны при запуске игры через Telegram.':'Friend profiles are available when the game is opened through Telegram.',
+  'Результаты поиска':'Search results','Запросы в друзья':'Friend requests','Мои друзья':'My friends',
+  'Новых запросов пока нет.':'No new requests yet.','Загружаем профиль и витрину…':'Loading profile and showcase…',
+  'Витрина котов':'Cat showcase','Пока нет котов на витрине.':'No cats featured yet.',
+  'Профиль пока не синхронизирован:':'Profile is not synced yet:','Обновляем профиль в фоне…':'Updating profile in the background…',
+  'Сначала выбери точку на карте':'Choose a point on the map first','Опубликовать находку':'Publish discovery',
+  'Не удалось опубликовать находку.':'Could not publish discovery.','Находка опубликована на общей карте!':'Discovery published to the shared map!',
+  'Выбери фото кота из галереи':'Choose a cat photo from your gallery','Описание (необязательно)':'Description (optional)',
+  'Имя кота (например, Рыжик)':'Cat name (e.g. Ginger)','Координаты скопированы.':'Coordinates copied.',
+  'Скопировать координаты':'Copy coordinates','Моё место':'My location','Загружаем метки…':'Loading markers…',
+  'Удалить эту находку с общей карты у всех игроков?':'Remove this discovery from the shared map for all players?',
+  'Находка удалена с общей карты у всех игроков.':'Discovery removed from the shared map for all players.',
+  'Точка выбрана. Перед публикацией проверь, не раскрывает ли она чужой дом.':'Point selected. Make sure it does not reveal someone’s home before publishing.',
+  'Геолокация не поддерживается этим устройством.':'Geolocation is not supported on this device.',
+  'Не удалось получить геолокацию. Можно выбрать точку нажатием на карту.':'Could not get your location. Tap the map to choose a point.',
+  'Открой игру через Telegram-бота':'Open the game through the Telegram bot','Не настроено подключение к Supabase':'Supabase connection is not configured',
+  'Сервер вернул некорректный ответ':'The server returned an invalid response','Ошибка сервера':'Server error',
+  'Выбери изображение.':'Choose an image.','Фото слишком большое. Выбери файл до 12 МБ.':'Photo is too large. Choose a file under 12 MB.',
+  'Подготавливаю фотографию…':'Preparing photo…','Фото загружено. Автоматически определяю кота…':'Photo uploaded. Detecting the cat…',
+  'Не удалось открыть фото.':'Could not open photo.','ИИ изучает фотографию…':'AI is analyzing the photo…',
+  'Кот найден! Проверь описание и создай карточку.':'Cat found! Review the description and create a card.',
+  'ИИ не смог подтвердить, что на фото кот. Попробуй другое фото.':'AI could not confirm that the photo contains a cat. Try another photo.',
+  'Сначала нажми «Определить кота» и дождись проверки фото.':'Tap “Detect cat” and wait for the photo check first.',
+  'Напиши имя кота перед сохранением.':'Enter the cat’s name before saving.',
+  'Имя кота должно быть не длиннее 40 символов.':'Cat name must be 40 characters or fewer.',
+  'Имя не может быть пустым.':'Name cannot be empty.','Имя кота обновлено.':'Cat name updated.',
+  'Выбери изображение для аватарки.':'Choose an image for your avatar.','Файл аватарки должен быть меньше 12 МБ.':'Avatar image must be under 12 MB.',
+  'Аватар выбран. Нажми «Сохранить профиль».':'Avatar selected. Tap “Save profile”.','Укажи имя профиля.':'Enter a profile name.',
+  'Имя профиля должно быть не длиннее 32 символов.':'Profile name must be 32 characters or fewer.',
+  'Введи Telegram username (минимум 2 символа).':'Enter a Telegram username (at least 2 characters).',
+  'Поиск настоящих друзей доступен внутри Telegram.':'Friend search is available inside Telegram.',
+  'В витрине может быть не больше 6 котов.':'You can feature up to 6 cats.',
+  'Показываются только игроки, которые хотя бы раз запускали Cat Go.':'Only players who have opened Cat Go at least once are shown.',
+  'Найди игроков Cat Go по Telegram username.':'Find Cat Go players by Telegram username.',
+  'Настоящие друзья работают при открытии игры через Telegram-бота.':'Friend features work when the game is opened through the Telegram bot.',
+  'Режим владельца для @elchervei: все фоны, рамки, аксессуары и стили карт доступны для просмотра.':'Owner preview for @elchervei: all backgrounds, frames, accessories, and card styles are available.',
+  'Награды открываются за уровень, XP не списывается. Выбранные рамка, аксессуар и стиль карточек применяются сразу; нажми кнопку выше, чтобы сохранить их.':'Cosmetics unlock as you level up, and XP is never spent. Selected frames, accessories, and card styles apply immediately; tap the button above to save them.'
+
 };
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -633,6 +687,7 @@ function App() {
   const [tab, setTab] = useState('home');
   const [language, setLanguage] = useState(() => localStorage.getItem('catgo_language') || 'ru');
   const [darkTheme, setDarkTheme] = useState(() => localStorage.getItem('catgo_theme') !== 'light');
+  const [previewCosmetic, setPreviewCosmetic] = useState(null);
   const isEnglish = language === 'en';
   const t = (ru, en) => isEnglish ? en : ru;
   useEffect(() => {
@@ -1716,6 +1771,7 @@ function App() {
                 return (
                   <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`bg-${key}`}>
                     <div className="shop-preview" style={{ background: backgrounds[key] }}>
+                      <button type="button" className="cosmetic-eye" aria-label={t('Посмотреть','Preview')} title={t('Посмотреть','Preview')} onClick={() => setPreviewCosmetic({ type: 'background', title: backgroundLabels[key], key, unlocked, level: requiredLevel })}><Eye size={17} /></button>
                       <span className="shop-preview-cat">🐈</span>
                       {!unlocked && <span className="shop-lock"><Lock size={16} /> Ур. {requiredLevel}</span>}
                       {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
@@ -1742,6 +1798,7 @@ function App() {
                 const equipped = (profile.avatar_frame_key || 'none') === item.key;
                 return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`frame-${item.key}`}>
                   <div className={`shop-preview cosmetic-preview ${item.style}`}>
+                    <button type="button" className="cosmetic-eye" aria-label={t('Посмотреть','Preview')} title={t('Посмотреть','Preview')} onClick={() => setPreviewCosmetic({ type: 'frame', title: item.label, key: item.key, style: item.style, unlocked, level: item.level })}><Eye size={17} /></button>
                     <div className="cosmetic-avatar">🐈</div>
                     {!unlocked && <span className="shop-lock"><Lock size={15} /> Ур. {item.level}</span>}
                     {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
@@ -1761,7 +1818,7 @@ function App() {
                 const unlocked = unlockLevel >= item.level;
                 const equipped = (profile.cat_card_style_key || 'classic') === item.key;
                 return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`card-${item.key}`}>
-                  <div className={`shop-preview ${item.style}`}><span className="shop-preview-cat">{item.emoji}</span>
+                  <div className={`shop-preview ${item.style}`}><button type="button" className="cosmetic-eye" aria-label={t('Посмотреть','Preview')} title={t('Посмотреть','Preview')} onClick={() => setPreviewCosmetic({ type: 'card', title: item.label, key: item.key, style: item.style, emoji: item.emoji, unlocked, level: item.level })}><Eye size={17} /></button><span className="shop-preview-cat">{item.emoji}</span>
                     {!unlocked && <span className="shop-lock"><Lock size={15} /> Ур. {item.level}</span>}
                     {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
                   </div>
@@ -1781,6 +1838,7 @@ function App() {
                 const equipped = (profile.avatar_accessory_key || 'none') === item.key;
                 return <article className={`shop-item ${unlocked ? '' : 'locked'}`} key={`accessory-${item.key}`}>
                   <div className="shop-preview accessory-preview" style={{ background: backgrounds[profileBackground] || backgrounds.lavender }}>
+                    <button type="button" className="cosmetic-eye" aria-label={t('Посмотреть','Preview')} title={t('Посмотреть','Preview')} onClick={() => setPreviewCosmetic({ type: 'accessory', title: item.label, key: item.key, emoji: item.emoji || '🐈', unlocked, level: item.level })}><Eye size={17} /></button>
                     <span className="shop-preview-cat">{item.emoji || '🐈'}</span>
                     {!unlocked && <span className="shop-lock"><Lock size={15} /> Ур. {item.level}</span>}
                     {unlocked && equipped && <span className="shop-equipped"><CheckCircle2 size={15} /> Надето</span>}
@@ -1797,6 +1855,51 @@ function App() {
           </button>
           <div className="note-card"><Sparkles size={18} /><p>Награды открываются за уровень, XP не списывается. Выбранные рамка, аксессуар и стиль карточек применяются сразу; нажми кнопку выше, чтобы сохранить их.</p></div>
         </main>
+      )}
+
+      {previewCosmetic && (
+        <div className="modal-backdrop cosmetic-preview-backdrop" onClick={() => setPreviewCosmetic(null)}>
+          <section className="info-modal cosmetic-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="modal-close" onClick={() => setPreviewCosmetic(null)} aria-label={t('Закрыть','Close')}><X size={19} /></button>
+            <span className="eyebrow">{t('ПРЕДПРОСМОТР','PREVIEW')}</span>
+            <h2>{previewCosmetic.title}</h2>
+            {previewCosmetic.type === 'background' && (
+              <div className="cosmetic-large-preview" style={{ background: backgrounds[previewCosmetic.key] || backgrounds.lavender }}>
+                <div className="cosmetic-large-avatar">🐈</div><strong>{profile.display_name || t('Котоисследователь','Cat explorer')}</strong><small>@{profile.username || 'cat_explorer'}</small>
+              </div>
+            )}
+            {previewCosmetic.type === 'frame' && (
+              <div className="cosmetic-large-preview" style={{ background: backgrounds[profileBackground] || backgrounds.lavender }}>
+                <div className={`cosmetic-large-avatar cosmetic-avatar ${previewCosmetic.style}`}>🐈</div>
+                <strong>{profile.display_name || t('Котоисследователь','Cat explorer')}</strong><small>@{profile.username || 'cat_explorer'}</small>
+              </div>
+            )}
+            {previewCosmetic.type === 'card' && (
+              <article className={`cat-card cosmetic-large-card ${previewCosmetic.style}`}>
+                <div className="cat-card-image-wrap"><div className="cosmetic-card-cat">{previewCosmetic.emoji || '🐈'}</div></div>
+                <div className="cat-card-body"><h3>{t('Пример котика','Sample cat')}</h3><div className="cat-card-meta"><span>{t('Обычный','Common')}</span><span>+10 XP</span></div></div>
+              </article>
+            )}
+            {previewCosmetic.type === 'accessory' && (
+              <div className="cosmetic-large-preview" style={{ background: backgrounds[profileBackground] || backgrounds.lavender }}>
+                <div className="cosmetic-large-avatar accessory-large-avatar"><span>{previewCosmetic.emoji}</span>🐈</div>
+                <strong>{profile.display_name || t('Котоисследователь','Cat explorer')}</strong><small>@{profile.username || 'cat_explorer'}</small>
+              </div>
+            )}
+            <p className="muted">{previewCosmetic.unlocked ? t('Можно выбрать этот вариант.','You can select this option.') : t(`Откроется на уровне ${previewCosmetic.level}`, `Unlocks at level ${previewCosmetic.level}`)}</p>
+            <button className="primary-button full" onClick={() => {
+              if (previewCosmetic.unlocked) {
+                if (previewCosmetic.type === 'background') {
+                  setProfileBackground(previewCosmetic.key);
+                  setProfile((prev) => ({ ...prev, background_key: previewCosmetic.key }));
+                } else if (previewCosmetic.type === 'frame') setProfile((prev) => ({ ...prev, avatar_frame_key: previewCosmetic.key }));
+                else if (previewCosmetic.type === 'card') setProfile((prev) => ({ ...prev, cat_card_style_key: previewCosmetic.key }));
+                else if (previewCosmetic.type === 'accessory') setProfile((prev) => ({ ...prev, avatar_accessory_key: previewCosmetic.key }));
+                setPreviewCosmetic(null);
+              }
+            }} disabled={!previewCosmetic.unlocked}>{previewCosmetic.unlocked ? t('Выбрать','Select') : t('Заблокировано','Locked')}</button>
+          </section>
+        </div>
       )}
 
       {tab === 'friends' && (
