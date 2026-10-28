@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
                             temperature: 0.1,
                             maxOutputTokens: 500,
                         },
-                    }),;
+                    });
             let geminiResponse: Response;
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
