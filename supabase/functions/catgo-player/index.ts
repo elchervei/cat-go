@@ -178,6 +178,90 @@ Deno.serve(async (req) => {
         const me = user.id;
         const action = body?.action;
         await ensurePlayer(db, user);
+        // Analyze cat photos on the server so the Gemini key never reaches the browser.
+        if (action === "analyze_cat_photo") {
+            const apiKey = Deno.env.get("GEMINI_API_KEY");
+            if (!apiKey) {
+                return json({ error: "Не настроен ключ распознавания. Проверь GEMINI_API_KEY в Supabase Secrets." }, 503);
+            }
+            const photoDataUrl = body.photo_data_url;
+            if (typeof photoDataUrl !== "string" ||
+                !/^data:image\/(jpeg|png|webp);base64,/i.test(photoDataUrl)) {
+                return json({ error: "Передай фото в формате JPEG, PNG или WebP" }, 400);
+            }
+            const comma = photoDataUrl.indexOf(",");
+            const mimeMatch = photoDataUrl.slice(0, comma).match(/^data:(image\/(?:jpeg|png|webp));base64$/i);
+            const mimeType = mimeMatch?.[1]?.toLowerCase();
+            const base64 = photoDataUrl.slice(comma + 1);
+            if (!mimeType || !base64 || base64.length > 2_100_000 ||
+                !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+                return json({ error: "Фото слишком большое или имеет неверный формат. Выбери фото поменьше." }, 413);
+            }
+            const geminiResponse = await fetch(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": apiKey,
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: "Ты проверяешь фото для игры Cat Go. Определи, есть ли на изображении настоящий кот или кошка. Не считай игрушки, рисунки, собак и другие объекты котами. Если кот есть, опиши только видимые признаки; не угадывай точную породу, если это нельзя надёжно понять по фото. Ответь ТОЛЬКО корректным JSON без markdown по схеме: {\"is_cat\": boolean, \"confidence\": number от 0 до 1, \"coat_color\": string, \"pattern\": string, \"fur_length\": string, \"visible_traits\": string[], \"breed_guess\": string, \"description_ru\": string}. Для неизвестных признаков используй \"не удалось определить\". description_ru — короткое описание на русском. Если кота нет или уверенность низкая, is_cat=false." },
+                                { inline_data: { mime_type: mimeType, data: base64 } },
+                            ],
+                        }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            temperature: 0.1,
+                            maxOutputTokens: 500,
+                        },
+                    }),
+                },
+            );
+            if (!geminiResponse.ok) {
+                const details = await geminiResponse.text();
+                console.error("Gemini analysis failed:", geminiResponse.status, details.slice(0, 1000));
+                if (geminiResponse.status === 400 || geminiResponse.status === 403 || geminiResponse.status === 401) {
+                    return json({ error: "Gemini не принял запрос. Проверь ключ и доступ к модели в Google AI Studio." }, 502);
+                }
+                if (geminiResponse.status === 429) {
+                    return json({ error: "Лимит бесплатных запросов распознавания временно исчерпан. Попробуй позже." }, 429);
+                }
+                return json({ error: "Сервис распознавания временно недоступен. Попробуй ещё раз." }, 502);
+            }
+            const geminiData = await geminiResponse.json();
+            const rawText = geminiData?.candidates?.[0]?.content?.parts
+                ?.map((part: any) => typeof part.text === "string" ? part.text : "")
+                .join("")
+                .trim();
+            if (!rawText) {
+                return json({ error: "Не удалось распознать фото. Попробуй другое изображение." }, 502);
+            }
+            let analysis: any;
+            try {
+                analysis = JSON.parse(rawText);
+            }
+            catch {
+                console.error("Gemini returned invalid JSON:", rawText.slice(0, 500));
+                return json({ error: "Сервис вернул непонятный результат. Попробуй ещё раз." }, 502);
+            }
+            const confidence = Number(analysis.confidence);
+            const isCat = analysis.is_cat === true && Number.isFinite(confidence) && confidence >= 0.65;
+            return json({
+                analysis: {
+                    is_cat: isCat,
+                    confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0,
+                    coat_color: typeof analysis.coat_color === "string" ? analysis.coat_color.slice(0, 80) : "не удалось определить",
+                    pattern: typeof analysis.pattern === "string" ? analysis.pattern.slice(0, 80) : "не удалось определить",
+                    fur_length: typeof analysis.fur_length === "string" ? analysis.fur_length.slice(0, 80) : "не удалось определить",
+                    visible_traits: Array.isArray(analysis.visible_traits) ? analysis.visible_traits.filter((v: unknown) => typeof v === "string").slice(0, 8).map((v: string) => v.slice(0, 80)) : [],
+                    breed_guess: typeof analysis.breed_guess === "string" ? analysis.breed_guess.slice(0, 100) : "не удалось определить",
+                    description_ru: typeof analysis.description_ru === "string" ? analysis.description_ru.slice(0, 300) : "",
+                },
+            });
+        }
         // Publish a cat sighting only after Telegram verification and server-side validation.
         if (action === "map_create_sighting") {
             const catName = typeof body.cat_name === "string" ? body.cat_name.trim() : "Котик";
