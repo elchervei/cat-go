@@ -400,7 +400,9 @@ function SharedCatMap({ onMessage }) {
       }
     });
     return () => { markers.forEach((marker) => marker.remove()); };
-  }, [sightings, backendReady, mapReady, isMapAdmin, onMessage]);
+  // onMessage is a stable setter wrapper for this popup action; avoid recreating all markers on every parent render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sightings, backendReady, mapReady, isMapAdmin]);
 
   function locateMe() {
     if (!navigator.geolocation) {
