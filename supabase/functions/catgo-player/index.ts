@@ -450,6 +450,21 @@ Deno.serve(async (req) => {
             if (existing) {
                 return json({ error: "Эта карточка уже сохранена" }, 409);
             }
+            // Reject the same compressed photo even if the client generated a fresh card ID.
+            if (typeof body.card.photoHash === "string" && /^[a-f0-9]{64}$/.test(body.card.photoHash)) {
+                const { data: photoDuplicate, error: photoDuplicateError } = await db
+                    .from("catgo_cards")
+                    .select("id")
+                    .eq("telegram_id", me)
+                    .eq("card_data->>photoHash", body.card.photoHash)
+                    .limit(1)
+                    .maybeSingle();
+                if (photoDuplicateError)
+                    throw photoDuplicateError;
+                if (photoDuplicate) {
+                    return json({ error: "Это фото уже есть в твоей коллекции" }, 409);
+                }
+            }
             const { data, error } = await db.from("catgo_cards")
                 .insert({ telegram_id: me, card_data: body.card })
                 .select("id, card_data, created_at")
