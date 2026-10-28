@@ -548,3 +548,5 @@
 @keyframes sync-pulse {
   50% { opacity: .45; transform: scale(.85); }
 }
+
+.shop-save-button { margin-top: 6px; }
