@@ -788,7 +788,12 @@ function App() {
       return;
     }
 
-    const cardToSave = { ...draft, name: finalName };
+    // Ensure every card has an ID even if an older/cached draft was created before this field existed.
+    const cardToSave = {
+      ...draft,
+      id: typeof draft.id === 'string' && draft.id.trim() ? draft.id : (crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`),
+      name: finalName,
+    };
     setSavingCard(true);
     setMessage('');
 
