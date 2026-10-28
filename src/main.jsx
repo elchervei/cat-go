@@ -191,9 +191,9 @@ function App() {
   const [showInfo, setShowInfo] = useState(false);
   const [message, setMessage] = useState('');
 
-  const [profileName, setProfileName] = useState('');
-  const [profileAvatar, setProfileAvatar] = useState('');
-  const [profileBackground, setProfileBackground] = useState('lavender');
+  const [profileName, setProfileName] = useState(() => profile.display_name || '');
+  const [profileAvatar, setProfileAvatar] = useState(() => profile.avatar_url || '');
+  const [profileBackground, setProfileBackground] = useState(() => profile.background_key || 'lavender');
 
   const [friendQuery, setFriendQuery] = useState('');
   const [playerResults, setPlayerResults] = useState([]);
