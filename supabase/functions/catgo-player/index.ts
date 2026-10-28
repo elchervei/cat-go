@@ -197,15 +197,7 @@ Deno.serve(async (req) => {
                 !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
                 return json({ error: "Фото слишком большое или имеет неверный формат. Выбери фото поменьше." }, 413);
             }
-            const geminiResponse = await fetch(
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-goog-api-key": apiKey,
-                    },
-                    body: JSON.stringify({
+            const geminiRequestBody = JSON.stringify({
                         contents: [{
                             parts: [
                                 { text: "Ты проверяешь фото для игры Cat Go. Определи, есть ли на изображении настоящий кот или кошка. Не считай игрушки, рисунки, собак и другие объекты котами. Если кот есть, опиши только видимые признаки; не угадывай точную породу, если это нельзя надёжно понять по фото. Ответь ТОЛЬКО корректным JSON без markdown по схеме: {\"is_cat\": boolean, \"confidence\": number от 0 до 1, \"coat_color\": string, \"pattern\": string, \"fur_length\": string, \"visible_traits\": string[], \"breed_guess\": string, \"description_ru\": string}. Для неизвестных признаков используй \"не удалось определить\". description_ru — короткое описание на русском. Если кота нет или уверенность низкая, is_cat=false." },
@@ -217,9 +209,33 @@ Deno.serve(async (req) => {
                             temperature: 0.1,
                             maxOutputTokens: 500,
                         },
-                    }),
-                },
-            );
+                    }),;
+            let geminiResponse: Response;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    geminiResponse = await fetch(
+                        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "x-goog-api-key": apiKey,
+                            },
+                            body: geminiRequestBody,
+                        },
+                    );
+                } catch (error) {
+                    console.warn("Gemini request failed:", attempt, error);
+                    if (attempt === 3) throw error;
+                    await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+                    continue;
+                }
+                const retryable = [429, 500, 502, 503, 504].includes(geminiResponse.status);
+                if (!retryable || attempt === 3) break;
+                const retryDetails = await geminiResponse.text();
+                console.warn("Gemini temporary error; retrying:", geminiResponse.status, "attempt", attempt, retryDetails.slice(0, 300));
+                await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+            }
             if (!geminiResponse.ok) {
                 const details = await geminiResponse.text();
                 console.error("Gemini analysis failed:", geminiResponse.status, details.slice(0, 1000));
