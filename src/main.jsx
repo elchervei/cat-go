@@ -13,6 +13,11 @@ import './style.css';
 
 
 const UI_TRANSLATIONS = {
+
+  'Пока нет находок':'No discoveries yet','Для публикации обнови Supabase Edge Function и создай хранилище cat-sightings по инструкции из новой миграции.':'To publish discoveries, update the Supabase Edge Function and create the cat-sightings storage bucket using the new migration instructions.',
+  'Удалить находку':'Delete discovery','Не удалось удалить находку.':'Could not delete discovery.','Выбранная точка':'Selected point',
+  'Найдено находок:':'Discoveries found:','Загружаем…':'Loading…','Ошибка загрузки':'Loading error',
+
   'Главная':'Home','Коллекция':'Collection','Карта':'Map','Друзья':'Friends','Профиль':'Profile','Настройки':'Settings',
   'кошачья экспедиция':'Cat expedition','КОШАЧЬЯ ЭКСПЕДИЦИЯ':'CAT EXPEDITION','О проекте':'About the project',
   'Загружаем коллекцию…':'Loading collection…','Обновляем профиль в фоне…':'Updating profile in the background…',
@@ -429,7 +434,7 @@ const emptyProfile = {
 };
 
 
-function SharedCatMap({ onMessage }) {
+function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
   const mapElementRef = useRef(null);
   const mapRef = useRef(null);
   const selectedMarkerRef = useRef(null);
@@ -565,14 +570,15 @@ function SharedCatMap({ onMessage }) {
     const markers = [];
     const isGoogle = Boolean(window.google?.maps && typeof map.addListener === 'function');
     sightings.forEach((sighting) => {
-      const title = String(sighting.cat_name || 'Котик');
+      const title = String(sighting.cat_name || (isEnglish ? 'Cat' : 'Котик'));
       // Build popup content with DOM APIs so names cannot inject HTML.
       const popupContent = document.createElement('div');
+      popupContent.className = `catgo-map-popup-content${darkTheme ? ' is-dark' : ' is-light'}`;
       popupContent.style.maxWidth = '220px';
       if (typeof sighting.photo_url === 'string' && /^https:\/\//.test(sighting.photo_url)) {
         const photo = document.createElement('img');
         photo.src = sighting.photo_url;
-        photo.alt = 'Фото находки';
+        photo.alt = isEnglish ? 'Discovery photo' : 'Фото находки';
         photo.style.cssText = 'width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:6px';
         popupContent.appendChild(photo);
       }
@@ -581,27 +587,27 @@ function SharedCatMap({ onMessage }) {
       popupContent.appendChild(heading);
       if (sighting.created_at) {
         const date = document.createElement('div');
-        date.textContent = new Date(sighting.created_at).toLocaleDateString('ru-RU');
+        date.textContent = new Date(sighting.created_at).toLocaleDateString(isEnglish ? 'en-US' : 'ru-RU');
         date.style.cssText = 'font-size:12px;opacity:.7;margin-top:3px';
         popupContent.appendChild(date);
       }
       if (isMapAdmin) {
         const deleteButton = document.createElement('button');
         deleteButton.type = 'button';
-        deleteButton.textContent = '🗑 Удалить фото';
+        deleteButton.textContent = isEnglish ? '🗑 Delete photo' : '🗑 Удалить фото';
         deleteButton.style.cssText = 'display:block;width:100%;margin-top:8px;padding:8px;border:0;border-radius:8px;background:#d93636;color:white;font-weight:600;cursor:pointer';
         deleteButton.addEventListener('click', async () => {
-          if (!window.confirm('Удалить эту находку с общей карты у всех игроков?')) return;
+          if (!window.confirm(isEnglish ? 'Remove this discovery from the shared map for all players?' : 'Удалить эту находку с общей карты у всех игроков?')) return;
           deleteButton.disabled = true;
-          deleteButton.textContent = 'Удаляем…';
+          deleteButton.textContent = isEnglish ? 'Deleting…' : 'Удаляем…';
           try {
             await catgoRequest('map_delete_sighting', { sightingId: sighting.id });
             setSightings((current) => current.filter((item) => String(item.id) !== String(sighting.id)));
-            onMessage('Находка удалена с общей карты у всех игроков.');
+            onMessage(isEnglish ? 'Discovery removed from the shared map for all players.' : 'Находка удалена с общей карты у всех игроков.');
           } catch (error) {
             deleteButton.disabled = false;
             deleteButton.textContent = '🗑 Удалить фото';
-            onMessage(error.message || 'Не удалось удалить находку.');
+            onMessage(error.message || (isEnglish ? 'Could not delete discovery.' : 'Не удалось удалить находку.'));
           }
         });
         popupContent.appendChild(deleteButton);
@@ -618,7 +624,7 @@ function SharedCatMap({ onMessage }) {
         const element = document.createElement('div');
         element.className = 'catgo-map-cat-pin';
         element.innerHTML = '<span>🐈</span>';
-        const popup = new maplibregl.Popup({ offset: 24 }).setDOMContent(popupContent);
+        const popup = new maplibregl.Popup({ offset: 24, className: darkTheme ? 'catgo-map-popup-dark' : 'catgo-map-popup-light' }).setDOMContent(popupContent);
         const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
           .setLngLat([Number(sighting.longitude), Number(sighting.latitude)])
           .setPopup(popup)
@@ -629,7 +635,7 @@ function SharedCatMap({ onMessage }) {
     return () => { markers.forEach((marker) => marker.remove()); };
   // onMessage is a stable setter wrapper for this popup action; avoid recreating all markers on every parent render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sightings, backendReady, mapReady, isMapAdmin]);
+  }, [sightings, backendReady, mapReady, isMapAdmin, darkTheme, isEnglish]);
 
   function locateMe() {
     if (!navigator.geolocation) {
@@ -1407,7 +1413,7 @@ function App() {
               <p className="muted">{t('Общая карта встреч с котами. Геолокация включается только по твоему нажатию.', 'A shared map of cat sightings. Location is used only when you choose to share it.')}</p>
             </div>
           </section>
-          <SharedCatMap onMessage={notify} />
+          <SharedCatMap onMessage={notify} darkTheme={darkTheme} isEnglish={isEnglish} />
           <section className="map-steps">
             <h2>Следующий этап</h2>
             <div><span>1</span><p><strong>Публикация находки</strong><small>Защищённая загрузка фотографии и координат.</small></p></div>
