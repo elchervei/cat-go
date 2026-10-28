@@ -13,6 +13,47 @@ import './style.css';
 
 
 const UI_TRANSLATIONS = {
+  "Геолокация не поддерживается этим устройством.": "Geolocation is not supported on this device.",
+  "Точка выбрана. Перед публикацией проверь, не раскрывает ли она чужой дом.": "Point selected. Before publishing, make sure it does not reveal someone else's home.",
+  "Выбери файл изображения.": "Choose an image file.",
+  "Добавить кота на общую карту": "Add a cat to the shared map",
+  "Выбери точку на карте и загрузи фото реального кота. Координаты будут округлены примерно до 100 метров для приватности.": "Choose a point on the map and upload a photo of a real cat. Coordinates are rounded to roughly 100 meters for privacy.",
+  "Предпросмотр находки": "Discovery preview",
+  "Имя кота (например, Рыжик)": "Cat name (e.g. Ginger)",
+  "Описание (необязательно)": "Description (optional)",
+  "Публикуй только фото котов, которые ты вправе размещать. Автоматическая проверка, что на фото именно кот, пока не подключена.": "Only post cat photos you have permission to share. Automatic cat verification for map posts is not enabled yet.",
+  "Для публикации обнови Supabase Edge Function и создай хранилище cat-sightings по инструкции из новой миграции.": "To publish discoveries, update the Supabase Edge Function and create the cat-sightings storage bucket using the new migration instructions.",
+  "Выбери изображение.": "Choose an image.",
+  "Фото слишком большое. Выбери файл до 12 МБ.": "Photo is too large. Choose a file under 12 MB.",
+  "Подготавливаю фотографию…": "Preparing photo…",
+  "Это фото уже есть в твоей коллекции. Сделай другое фото кота.": "This photo is already in your collection. Take a different cat photo.",
+  "Фото загружено. Автоматически определяю кота…": "Photo uploaded. Detecting the cat…",
+  "Не удалось открыть фото.": "Could not open photo.",
+  "ИИ изучает фотографию…": "AI is analyzing the photo…",
+  "Кот найден! Проверь описание и создай карточку.": "Cat found! Review the description and create a card.",
+  "ИИ не смог подтвердить, что на фото кот. Попробуй другое фото.": "AI could not confirm that the photo contains a cat. Try another photo.",
+  "Сначала нажми «Определить кота» и дождись проверки фото.": "Tap “Detect cat” and wait for the photo check first.",
+  "Напиши имя кота перед сохранением.": "Enter the cat’s name before saving.",
+  "Имя кота должно быть не длиннее 40 символов.": "Cat name must be 40 characters or fewer.",
+  "Эта карточка уже добавлена.": "This card has already been added.",
+  "Имя не может быть пустым.": "Name cannot be empty.",
+  "Имя кота обновлено.": "Cat name updated.",
+  "Карточка удалена.": "Card deleted.",
+  "Удалить карточку из коллекции?": "Delete this card from your collection?",
+  "Не удалось обработать изображение": "Could not process the image",
+  "Не удалось сжать изображение": "Could not compress the image",
+  "Не удалось прочитать изображение": "Could not read the image",
+  "Не удалось открыть изображение": "Could not open the image",
+  "Профиль пока не синхронизирован:": "Profile is not synced yet:",
+  "Не удалось загрузить коллекцию:": "Could not load collection:",
+  "Выбери изображение для аватарки.": "Choose an avatar image.",
+  "Файл аватарки должен быть меньше 12 МБ.": "Avatar file must be under 12 MB.",
+  "Аватар выбран. Нажми «Сохранить профиль».": "Avatar selected. Tap “Save profile”.",
+  "Не удалось обработать аватар.": "Could not process avatar.",
+  "Укажи имя профиля.": "Enter a profile name.",
+  "Имя профиля должно быть не длиннее 32 символов.": "Profile name must be 32 characters or fewer.",
+  "Профиль сохранён!": "Profile saved!",
+  "Координаты скопированы.": "Coordinates copied.",
 
   'Пока нет находок':'No discoveries yet','Для публикации обнови Supabase Edge Function и создай хранилище cat-sightings по инструкции из новой миграции.':'To publish discoveries, update the Supabase Edge Function and create the cat-sightings storage bucket using the new migration instructions.',
   'Удалить находку':'Delete discovery','Не удалось удалить находку.':'Could not delete discovery.','Выбранная точка':'Selected point',
@@ -606,7 +647,7 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
             onMessage(isEnglish ? 'Discovery removed from the shared map for all players.' : 'Находка удалена с общей карты у всех игроков.');
           } catch (error) {
             deleteButton.disabled = false;
-            deleteButton.textContent = '🗑 Удалить фото';
+            deleteButton.textContent = isEnglish ? '🗑 Delete photo' : '🗑 Удалить фото';
             onMessage(error.message || (isEnglish ? 'Could not delete discovery.' : 'Не удалось удалить находку.'));
           }
         });
@@ -639,7 +680,7 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
 
   function locateMe() {
     if (!navigator.geolocation) {
-      onMessage('Геолокация не поддерживается этим устройством.');
+      onMessage(isEnglish ? 'Geolocation is not supported on this device.' : 'Геолокация не поддерживается этим устройством.');
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -667,9 +708,9 @@ function SharedCatMap({ onMessage, darkTheme, isEnglish }) {
           selectedMarkerRef.current = new maplibregl.Marker({ element, anchor: 'bottom' })
             .setLngLat([point.lng, point.lat]).addTo(map);
         }
-        onMessage('Точка выбрана. Перед публикацией проверь, не раскрывает ли она чужой дом.');
+        onMessage(isEnglish ? "Point selected. Before publishing, make sure it does not reveal someone else's home." : 'Точка выбрана. Перед публикацией проверь, не раскрывает ли она чужой дом.');
       },
-      () => onMessage('Не удалось получить геолокацию. Можно выбрать точку нажатием на карту.'),
+      () => onMessage(isEnglish ? 'Could not get your location. Tap the map to choose a point.' : 'Не удалось получить геолокацию. Можно выбрать точку нажатием на карту.'),
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
     );
   }
