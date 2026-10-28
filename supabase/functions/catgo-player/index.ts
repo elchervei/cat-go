@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
             const geminiRequestBody = JSON.stringify({
                 contents: [{
                     parts: [
-                        { text: "Проверь изображение для игры Cat Go. Определи, есть ли на фото настоящий кот или кошка, а не игрушка/рисунок/другое животное. Верни только один компактный JSON-объект без markdown и без пояснений. Все текстовые значения должны быть короткими (до 8 слов), массив visible_traits — максимум 4 элемента. Схема: {\"is_cat\":true,\"confidence\":0.95,\"coat_color\":\"рыжий\",\"pattern\":\"полосатый\",\"fur_length\":\"короткая шерсть\",\"visible_traits\":[\"зелёные глаза\"],\"breed_guess\":\"не удалось определить\",\"description_ru\":\"Рыжий полосатый кот с короткой шерстью\"}. confidence — число от 0 до 1. Не угадывай породу без надёжных оснований; неизвестные признаки заполняй строкой \"не удалось определить\". Если настоящего кота нет или уверенность ниже 0.65, is_cat=false. Не добавляй никакого текста до или после JSON." },
+                        { text: "Проверь изображение для игры Cat Go. Определи, есть ли на фото настоящий кот или кошка, а не игрушка/рисунок/другое животное. Верни только один компактный JSON-объект без markdown и без пояснений. Все текстовые значения должны быть короткими (до 8 слов), массив visible_traits — максимум 4 элемента. Схема: {\"is_cat\":true,\"confidence\":0.95,\"coat_color\":\"рыжий\",\"pattern\":\"полосатый\",\"fur_length\":\"короткая шерсть\",\"eye_color\":\"зелёные\",\"visible_traits\":[\"белые лапы\"],\"breed_guess\":\"не удалось определить\",\"description_ru\":\"Рыжий полосатый кот с короткой шерстью\"}. confidence — число от 0 до 1. Не угадывай породу без надёжных оснований; неизвестные признаки заполняй строкой \"не удалось определить\". Если настоящего кота нет или уверенность ниже 0.65, is_cat=false. Не добавляй никакого текста до или после JSON." },
                         { inline_data: { mime_type: mimeType, data: base64 } },
                     ],
                 }],
@@ -300,11 +300,69 @@ Deno.serve(async (req) => {
                     coat_color: typeof analysis.coat_color === "string" ? analysis.coat_color.slice(0, 80) : "не удалось определить",
                     pattern: typeof analysis.pattern === "string" ? analysis.pattern.slice(0, 80) : "не удалось определить",
                     fur_length: typeof analysis.fur_length === "string" ? analysis.fur_length.slice(0, 80) : "не удалось определить",
+                    eye_color: typeof analysis.eye_color === "string" ? analysis.eye_color.slice(0, 80) : "не удалось определить",
                     visible_traits: Array.isArray(analysis.visible_traits) ? analysis.visible_traits.filter((v: unknown) => typeof v === "string").slice(0, 8).map((v: string) => v.slice(0, 80)) : [],
                     breed_guess: typeof analysis.breed_guess === "string" ? analysis.breed_guess.slice(0, 100) : "не удалось определить",
                     description_ru: typeof analysis.description_ru === "string" ? analysis.description_ru.slice(0, 300) : "",
                 },
             });
+        }
+        // Generate collection-aware missions with Gemini. The client sends only compact cat traits, never photos.
+        if (action === "generate_smart_missions") {
+            const apiKey = Deno.env.get("GEMINI_API_KEY");
+            const inputCards = Array.isArray(body.cards) ? body.cards.slice(0, 60) : [];
+            const collection = inputCards.map((card: any) => ({
+                coat_color: String(card?.coat_color ?? "неизвестно").slice(0, 40),
+                pattern: String(card?.pattern ?? "неизвестно").slice(0, 40),
+                fur_length: String(card?.fur_length ?? "неизвестно").slice(0, 40),
+                eye_color: String(card?.eye_color ?? "неизвестно").slice(0, 40),
+                visible_traits: Array.isArray(card?.visible_traits) ? card.visible_traits.slice(0, 4).map((v: any) => String(v).slice(0, 40)) : [],
+            }));
+            if (!apiKey) return json({ error: "Не настроен GEMINI_API_KEY в Supabase Secrets." }, 503);
+            const prompt = "Ты создаёшь задания для игры Cat Go, где игрок фотографирует реальных котов. На основе коллекции предложи ровно 3 разнообразных, добрых и выполнимых задания. Не проси подходить к незнакомым котам, трогать их, кормить или тревожить. Не утверждай, что коты находятся рядом. По возможности предлагай недостающие окрасы и рисунки. Награда 15-40 XP. Верни только JSON по схеме {\"missions\":[{\"title\":\"...\",\"description\":\"...\",\"target_color\":\"...\",\"target_pattern\":\"...\",\"target_trait\":\"...\",\"goal\":1,\"reward_xp\":20}]}. title до 45 символов, description до 100 символов. Если коллекция пустая, предложи простые стартовые задания. Коллекция: " + JSON.stringify(collection);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 18000);
+            let response: Response;
+            try {
+                response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.4, maxOutputTokens: 700 } }),
+                    signal: controller.signal,
+                });
+            } catch (error) {
+                console.error("Smart mission generation request failed:", error);
+                return json({ error: "ИИ заданий временно недоступен. Попробуй позже." }, 503);
+            } finally {
+                clearTimeout(timeoutId);
+            }
+            if (!response.ok) {
+                console.warn("Smart mission generation failed:", response.status, (await response.text()).slice(0, 300));
+                return json({ error: "ИИ заданий временно недоступен (код " + response.status + ")." }, 503);
+            }
+            const payload = await response.json();
+            const raw = payload?.candidates?.[0]?.content?.parts?.map((part: any) => typeof part.text === "string" ? part.text : "").join("").trim() ?? "";
+            try {
+                const start = raw.indexOf("{");
+                const end = raw.lastIndexOf("}");
+                if (start < 0 || end <= start) throw new Error("Missing JSON");
+                const parsed = JSON.parse(raw.slice(start, end + 1));
+                const missions = (Array.isArray(parsed.missions) ? parsed.missions : []).slice(0, 3).map((mission: any, index: number) => ({
+                    id: "ai-" + index,
+                    title: String(mission.title ?? "Котоисследователь").slice(0, 45),
+                    description: String(mission.description ?? "Найди кота с новым признаком").slice(0, 100),
+                    target_color: String(mission.target_color ?? "").slice(0, 40),
+                    target_pattern: String(mission.target_pattern ?? "").slice(0, 40),
+                    target_trait: String(mission.target_trait ?? "").slice(0, 40),
+                    goal: Math.max(1, Math.min(5, Number(mission.goal) || 1)),
+                    reward_xp: Math.max(15, Math.min(40, Number(mission.reward_xp) || 20)),
+                }));
+                if (!missions.length) throw new Error("No missions");
+                return json({ missions });
+            } catch (error) {
+                console.error("Could not parse smart missions:", error, raw.slice(0, 300));
+                return json({ error: "ИИ вернул некорректные задания. Попробуй ещё раз." }, 502);
+            }
         }
         // Publish a cat sighting only after Telegram verification and server-side validation.
         if (action === "map_create_sighting") {
