@@ -193,6 +193,12 @@ function compressImage(file, maxSide = 1280, quality = 0.78) {
   });
 }
 
+async function fingerprintPhoto(dataUrl) {
+  const bytes = new TextEncoder().encode(String(dataUrl || ''));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 const emptyProfile = {
   telegram_id: null,
   username: '',
@@ -692,9 +698,17 @@ function App() {
     setMessage('Подготавливаю фотографию…');
     try {
       const compressed = await compressImage(file, 1280, 0.78);
+      const photoHash = await fingerprintPhoto(compressed);
+      const duplicate = cards.some((card) => card.photoHash === photoHash || card.photo === compressed);
+      if (duplicate) {
+        setPhoto('');
+        setDraft(null);
+        setMessage('Это фото уже есть в твоей коллекции. Сделай другое фото кота.');
+        return;
+      }
       setPhoto(compressed);
       setFileName(file.name);
-      setDraft(null);
+      setDraft({ photoHash });
       setTab('camera');
       setMessage('Фото готово. Теперь создай карточку.');
     } catch (error) {
@@ -710,6 +724,7 @@ function App() {
       name: '',
       createdAt: Date.now(),
       photo,
+      photoHash: draft?.photoHash || '',
       xp: 10,
       originalName: fileName,
     });
