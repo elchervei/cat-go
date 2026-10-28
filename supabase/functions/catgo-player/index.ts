@@ -329,6 +329,50 @@ Deno.serve(async (req) => {
             if (!base64 || base64.length > 2_100_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
                 return json({ error: "Фото слишком большое. Выбери другое фото" }, 413);
             }
+            // Independently verify the uploaded image on the server; never trust a client-side flag.
+            const visionKey = Deno.env.get("GEMINI_API_KEY");
+            if (!visionKey) {
+                return json({ error: "Не настроен ключ распознавания. Проверь GEMINI_API_KEY в Supabase Secrets." }, 503);
+            }
+            let catCheckResponse: Response;
+            try {
+                catCheckResponse = await fetch(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "x-goog-api-key": visionKey },
+                        body: JSON.stringify({
+                            contents: [{ parts: [
+                                { text: "Определи, изображён ли на фото настоящий кот или кошка, а не игрушка, рисунок или другое животное. Верни только JSON: {\\"is_cat\\":true,\\"confidence\\":0.95}. Если кота нет или не уверен, is_cat=false. confidence от 0 до 1." },
+                                { inline_data: { mime_type: "image/jpeg", data: base64 } },
+                            ] }],
+                            generationConfig: { responseMimeType: "application/json", temperature: 0, maxOutputTokens: 100 },
+                        }),
+                        signal: AbortSignal.timeout(20000),
+                    },
+                );
+            } catch (error) {
+                console.error("Map cat verification failed:", error);
+                return json({ error: "Не удалось проверить фото кота. Попробуй ещё раз." }, 502);
+            }
+            if (!catCheckResponse.ok) {
+                console.error("Map cat verification API status:", catCheckResponse.status);
+                return json({ error: "Сервис распознавания временно недоступен. Попробуй позже." }, 502);
+            }
+            const catCheckData = await catCheckResponse.json();
+            const catCheckText = catCheckData?.candidates?.[0]?.content?.parts
+                ?.map((part: any) => typeof part.text === "string" ? part.text : "")
+                .join("").trim();
+            let catCheck: any;
+            try {
+                const cleaned = String(catCheckText || "").replace(/^\\s*\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, "").trim();
+                catCheck = JSON.parse(cleaned.slice(cleaned.indexOf("{"), cleaned.lastIndexOf("}") + 1));
+            } catch {
+                return json({ error: "Не удалось подтвердить, что на фото кот. Попробуй другое фото." }, 422);
+            }
+            if (catCheck?.is_cat !== true || !Number.isFinite(Number(catCheck.confidence)) || Number(catCheck.confidence) < 0.65) {
+                return json({ error: "ИИ не подтвердил, что на фото настоящий кот. Метка не опубликована." }, 422);
+            }
             const { count, error: countError } = await db
                 .from("cat_sightings")
                 .select("id", { count: "exact", head: true })
