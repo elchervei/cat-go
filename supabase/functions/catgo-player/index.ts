@@ -198,18 +198,18 @@ Deno.serve(async (req) => {
                 return json({ error: "Фото слишком большое или имеет неверный формат. Выбери фото поменьше." }, 413);
             }
             const geminiRequestBody = JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: "Ты проверяешь фото для игры Cat Go. Определи, есть ли на изображении настоящий кот или кошка. Не считай игрушки, рисунки, собак и другие объекты котами. Если кот есть, опиши только видимые признаки; не угадывай точную породу, если это нельзя надёжно понять по фото. Ответь ТОЛЬКО корректным JSON без markdown по схеме: {\"is_cat\": boolean, \"confidence\": number от 0 до 1, \"coat_color\": string, \"pattern\": string, \"fur_length\": string, \"visible_traits\": string[], \"breed_guess\": string, \"description_ru\": string}. Для неизвестных признаков используй \"не удалось определить\". description_ru — короткое описание на русском. Если кота нет или уверенность низкая, is_cat=false." },
-                                { inline_data: { mime_type: mimeType, data: base64 } },
-                            ],
-                        }],
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            temperature: 0.1,
-                            maxOutputTokens: 500,
-                        },
-                    });
+                contents: [{
+                    parts: [
+                        { text: "Проверь изображение для игры Cat Go. Определи, есть ли на фото настоящий кот или кошка, а не игрушка/рисунок/другое животное. Верни только один компактный JSON-объект без markdown и без пояснений. Все текстовые значения должны быть короткими (до 8 слов), массив visible_traits — максимум 4 элемента. Схема: {\"is_cat\":true,\"confidence\":0.95,\"coat_color\":\"рыжий\",\"pattern\":\"полосатый\",\"fur_length\":\"короткая шерсть\",\"visible_traits\":[\"зелёные глаза\"],\"breed_guess\":\"не удалось определить\",\"description_ru\":\"Рыжий полосатый кот с короткой шерстью\"}. confidence — число от 0 до 1. Не угадывай породу без надёжных оснований; неизвестные признаки заполняй строкой \"не удалось определить\". Если настоящего кота нет или уверенность ниже 0.65, is_cat=false. Не добавляй никакого текста до или после JSON." },
+                        { inline_data: { mime_type: mimeType, data: base64 } },
+                    ],
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0,
+                    maxOutputTokens: 800,
+                },
+            });
             let geminiResponse: Response;
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 25000);
@@ -258,11 +258,21 @@ Deno.serve(async (req) => {
             }
             let analysis: any;
             try {
-                analysis = JSON.parse(rawText);
+                const cleanedText = rawText
+                    .replace(/^\uFEFF/, "")
+                    .replace(/^\s*```(?:json)?\s*/i, "")
+                    .replace(/\s*```\s*$/, "")
+                    .trim();
+                const objectStart = cleanedText.indexOf("{");
+                const objectEnd = cleanedText.lastIndexOf("}");
+                if (objectStart < 0 || objectEnd <= objectStart) {
+                    throw new Error("No complete JSON object in Gemini response");
+                }
+                analysis = JSON.parse(cleanedText.slice(objectStart, objectEnd + 1));
             }
             catch {
                 console.error("Gemini returned invalid JSON:", rawText.slice(0, 500));
-                return json({ error: "Сервис вернул непонятный результат. Попробуй ещё раз." }, 502);
+                return json({ error: "Gemini вернул неполный ответ. Попробуй ещё раз — если ошибка повторится, пришли лог." }, 502);
             }
             const confidence = Number(analysis.confidence);
             const isCat = analysis.is_cat === true && Number.isFinite(confidence) && confidence >= 0.65;
